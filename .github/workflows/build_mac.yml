@@ -28,8 +28,13 @@ jobs:
       run: |
         pyinstaller --noconsole --onefile --clean --add-data "assets:assets" --name="JD_Chess" main.py
 
+    - name: Zip macOS App for Artifact Upload
+      run: |
+        cd dist
+        zip -r JD_Chess_macOS.zip JD_Chess.app
+
     - name: Upload macOS App Artifact
       uses: actions/upload-artifact@v4
       with:
         name: JD_Chess_MacOS_App
-        path: dist/JD_Chess.app
+        path: dist/JD_Chess_macOS.zip
