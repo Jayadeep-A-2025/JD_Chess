@@ -28,6 +28,22 @@ jobs:
         python -m pip install --upgrade pip
         pip install PySide6 python-chess pyinstaller
 
+    - name: Download & Bundle Stockfish (Windows)
+      if: runner.os == 'Windows'
+      shell: powershell
+      run: |
+        mkdir assets -ErrorAction SilentlyContinue
+        Invoke-WebRequest -Uri "https://github.com/official-stockfish/Stockfish/releases/latest/download/stockfish-windows-x86-64-avx2.zip" -OutFile "stockfish.zip"
+        Expand-Archive -Path "stockfish.zip" -DestinationPath "sf_temp"
+        Get-ChildItem -Path "sf_temp" -Recurse -Filter "*.exe" | Copy-Item -Destination "assets\stockfish.exe"
+
+    - name: Download & Bundle Stockfish (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        mkdir -p assets
+        brew install stockfish
+        cp $(which stockfish) assets/stockfish
+
     - name: Build Executable (Windows)
       if: runner.os == 'Windows'
       run: |
