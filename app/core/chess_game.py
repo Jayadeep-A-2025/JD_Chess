@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 """Core chess game model using python-chess."""
 
 from dataclasses import dataclass
-from typing import Optional
 
 import chess
 
@@ -22,7 +23,7 @@ class ChessGame:
 
     def __init__(self) -> None:
         self.board = chess.Board()
-        self._move_history = []
+        self._move_history: list[str] = []
 
     def new_game(self) -> None:
         """Reset the board and move history."""
@@ -44,7 +45,7 @@ class ChessGame:
         self._move_history.append(san)
         return san
 
-    def undo_move(self) -> Optional[str]:
+    def undo_move(self) -> str | None:
         """Undo the last move, if one exists."""
         if not self.board.move_stack:
             return None
@@ -52,7 +53,7 @@ class ChessGame:
         self.board.pop()
         return self._move_history.pop()
 
-    def get_legal_moves(self, square_name: str) -> list:
+    def get_legal_moves(self, square_name: str) -> list[str]:
         """Return legal destination squares for a piece."""
         try:
             square = chess.parse_square(square_name)
@@ -65,7 +66,7 @@ class ChessGame:
             if move.from_square == square
         ]
 
-    def get_piece(self, square_name: str) -> Optional[str]:
+    def get_piece(self, square_name: str) -> str | None:
         """Return a piece symbol, or None for an empty square."""
         try:
             square = chess.parse_square(square_name)
@@ -75,9 +76,19 @@ class ChessGame:
         piece = self.board.piece_at(square)
         return piece.symbol() if piece else None
 
-    def get_move_history(self) -> list:
+    def get_move_history(self) -> list[str]:
         """Return a copy of the move history."""
         return self._move_history.copy()
+
+    def get_uci_moves(self) -> list[str]:
+        """Return a list of UCI moves played in this game."""
+        return [move.uci() for move in self.board.move_stack]
+
+    def load_uci_moves(self, uci_moves: list[str]) -> None:
+        """Reset the board and replay a list of UCI moves."""
+        self.new_game()
+        for uci_move in uci_moves:
+            self.make_move(uci_move)
 
     def get_status(self) -> GameStatus:
         """Report whose turn it is and whether the game has ended."""

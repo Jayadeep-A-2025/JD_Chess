@@ -1,4 +1,6 @@
-"""Stockfish UCI engine integration."""
+from __future__ import annotations
+
+"""Computer UCI engine integration."""
 
 import os
 import shutil
@@ -8,8 +10,8 @@ import chess
 import chess.engine
 
 
-class StockfishEngine:
-    """Manage a Stockfish process and request computer moves."""
+class ComputerEngine:
+    """Manage a Computer chess engine process and request computer moves."""
 
     DIFFICULTY_SETTINGS = {
         "Easy": {"time": 0.15, "skill": 1},
@@ -17,19 +19,19 @@ class StockfishEngine:
         "Hard": {"time": 1.20, "skill": 20},
     }
 
-    def __init__(self, engine_path=None):
+    def __init__(self, engine_path: str | None = None) -> None:
         self.engine_path = engine_path or self.find_engine()
         if not self.engine_path:
             raise FileNotFoundError(
-                "Stockfish was not found. Install it or set STOCKFISH_PATH."
+                "Computer engine was not found. Install it or set COMPUTER_PATH or STOCKFISH_PATH."
             )
 
         self.engine = chess.engine.SimpleEngine.popen_uci(self.engine_path)
 
     @staticmethod
-    def find_engine():
-        """Find Stockfish in configured, bundled, or system locations."""
-        configured_path = os.environ.get("STOCKFISH_PATH")
+    def find_engine() -> str | None:
+        """Find Computer engine in configured, bundled, or system locations."""
+        configured_path = os.environ.get("COMPUTER_PATH") or os.environ.get("STOCKFISH_PATH")
         if configured_path and os.path.isfile(configured_path):
             return configured_path
 
@@ -80,7 +82,7 @@ class StockfishEngine:
 
         return None
 
-    def get_best_move(self, board, difficulty="Medium"):
+    def get_best_move(self, board: chess.Board, difficulty: str = "Medium") -> str | None:
         engine = getattr(self, "engine", None)
         if engine is None or board.is_game_over():
             return None
@@ -98,7 +100,11 @@ class StockfishEngine:
 
         return result.move.uci() if result.move else None
 
-    def close(self):
+    def close(self) -> None:
         if self.engine is not None:
             self.engine.quit()
             self.engine = None
+
+
+# Backward-compatible alias
+StockfishEngine = ComputerEngine
