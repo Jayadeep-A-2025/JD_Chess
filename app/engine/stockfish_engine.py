@@ -72,6 +72,8 @@ class StockfishEngine:
         for candidate in (
             "/opt/homebrew/bin/stockfish",
             "/usr/local/bin/stockfish",
+            "/usr/bin/stockfish",
+            "/usr/games/stockfish",
         ):
             if os.path.isfile(candidate):
                 return candidate
@@ -79,17 +81,17 @@ class StockfishEngine:
         return None
 
     def get_best_move(self, board, difficulty="Medium"):
-        if board.is_game_over():
+        engine = getattr(self, "engine", None)
+        if engine is None or board.is_game_over():
             return None
-
         settings = self.DIFFICULTY_SETTINGS.get(
             difficulty, self.DIFFICULTY_SETTINGS["Medium"]
         )
 
-        if "Skill Level" in self.engine.options:
-            self.engine.configure({"Skill Level": settings["skill"]})
+        if "Skill Level" in engine.options:
+            engine.configure({"Skill Level": settings["skill"]})
 
-        result = self.engine.play(
+        result = engine.play(
             board,
             chess.engine.Limit(time=settings["time"]),
         )

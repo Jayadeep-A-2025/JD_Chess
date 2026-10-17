@@ -207,7 +207,8 @@ class ChessBoardWidget(QWidget):
     def handle_square_click(self, row, col):
         window = self.window()
 
-        if not window.is_human_turn():
+        is_human_turn = getattr(window, "is_human_turn", None)
+        if callable(is_human_turn) and not is_human_turn():
             return
 
         square = self.visual_to_square(row, col)
@@ -234,7 +235,9 @@ class ChessBoardWidget(QWidget):
                 else:
                     self.clear_selection()
                     self.refresh()
-                    window.on_human_move_made()
+                    on_human_move = getattr(window, "on_human_move_made", None)
+                    if callable(on_human_move):
+                        on_human_move()
                     return
 
         if piece is not None and piece.color == self.game.board.turn:
@@ -357,7 +360,7 @@ class MainWindow(QMainWindow):
 
     LOCAL_MODE = "Local 2-player"
     COMPUTER_MODE = "Play vs Stockfish"
-    POST_THINKING_DELAY_MS = 1500
+    POST_THINKING_DELAY_MS: int = 1500
 
     def __init__(self):
         super().__init__()
@@ -932,8 +935,9 @@ class MainWindow(QMainWindow):
         if worker is not self._stockfish_worker:
             return
 
+        worker_req_id = getattr(worker, "request_id", None)
         request_was_stale = (
-            worker.request_id != self._computer_request_id
+            worker_req_id != self._computer_request_id
         )
         self._stockfish_worker = None
 

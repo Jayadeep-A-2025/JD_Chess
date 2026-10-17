@@ -215,7 +215,7 @@ def wait_for_condition(qt_app, condition, timeout=3):
 def test_restart_during_search_starts_fresh_computer_move(qt_app):
     window = MainWindow()
     fake_engine = SlowFakeEngine()
-    window.engine = fake_engine
+    window.engine = fake_engine  # type: ignore
     window.POST_THINKING_DELAY_MS = 0
 
     window.mode_combo.blockSignals(True)
@@ -256,7 +256,7 @@ def test_restart_during_search_starts_fresh_computer_move(qt_app):
 def test_undo_after_computer_opening_as_black_restarts_search(qt_app):
     window = MainWindow()
     fake_engine = SlowFakeEngine()
-    window.engine = fake_engine
+    window.engine = fake_engine  # type: ignore
     window.POST_THINKING_DELAY_MS = 0
 
     window.mode_combo.blockSignals(True)

@@ -5,3 +5,6 @@ dist/
 .pytest_cache/
 __pycache__/
 *.pyc
+
+app/engine/stockfish_engine.py.bak
+app/ui/main_window.py.pre_undo_fix_20261017_134912
