@@ -1065,15 +1065,25 @@ class MainWindow(QMainWindow):
         self.board_widget.refresh()
 
     def undo_move(self):
+        computer_mode = self.is_computer_mode()
+        human_turn_before_undo = (
+            self.game.board.turn == self.player_color
+        )
+        move_count = len(self.game.board.move_stack)
+
+        # Invalidate any search or delayed move before changing the board.
         self.cancel_pending_computer_move()
-        if self.is_computer_mode():
-            if self.is_human_turn():
-                # Both player and computer had moved; undo both to return to player
-                for _ in range(2):
-                    if self.game.board.move_stack:
-                        self.game.undo_move()
+
+        if computer_mode:
+            if human_turn_before_undo:
+                # Normally undo the computer's move and the previous human move.
+                # If only the computer's opening exists, undo just that move.
+                moves_to_undo = 2 if move_count >= 2 else move_count
             else:
-                # Computer was thinking; undo player's last move
+                # The human just moved and the computer is thinking or responding.
+                moves_to_undo = 1 if move_count else 0
+
+            for _ in range(moves_to_undo):
                 if self.game.board.move_stack:
                     self.game.undo_move()
         elif self.game.board.move_stack:
@@ -1081,30 +1091,17 @@ class MainWindow(QMainWindow):
 
         self.board_widget.clear_selection()
         self.update_game_info()
+
+        # If undo leaves the computer to move, request a fresh search.
+        # An active stale worker will trigger this when it finishes.
+        if (
+            computer_mode
+            and not self.game.board.is_game_over()
+            and self.game.board.turn != self.player_color
+        ):
+            self.make_computer_move()
 
     def closeEvent(self, event):
         self._shutting_down = True
         self.close_engine()
         event.accept()
-
-def undo_move(self):
-        self.cancel_pending_computer_move()
-        if self.is_computer_mode():
-            if self.is_human_turn():
-                # Both player and computer had moved; undo both to return to player
-                for _ in range(2):
-                    if self.game.board.move_stack:
-                        self.game.undo_move()
-            else:
-                # Computer was thinking; undo player's last move
-                if self.game.board.move_stack:
-                    self.game.undo_move()
-        elif self.game.board.move_stack:
-            self.game.undo_move()
-
-        self.board_widget.clear_selection()
-        self.update_game_info()
-
-        # FIX: If it is now the computer's turn after undoing, trigger its move
-        if self.is_computer_mode() and not self.is_human_turn() and not self.game.board.is_game_over():
-            self.make_computer_move()

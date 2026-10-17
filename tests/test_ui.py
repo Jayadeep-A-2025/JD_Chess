@@ -251,3 +251,51 @@ def test_restart_during_search_starts_fresh_computer_move(qt_app):
         )
         window.close()
         qt_app.processEvents()
+
+
+def test_undo_after_computer_opening_as_black_restarts_search(qt_app):
+    window = MainWindow()
+    fake_engine = SlowFakeEngine()
+    window.engine = fake_engine
+    window.POST_THINKING_DELAY_MS = 0
+
+    window.mode_combo.blockSignals(True)
+    window.mode_combo.setCurrentText(window.COMPUTER_MODE)
+    window.mode_combo.blockSignals(False)
+
+    try:
+        # Start a new game as Black; the computer plays White.
+        window.change_mode(window.COMPUTER_MODE)
+
+        assert fake_engine.first_search_started.wait(timeout=2)
+
+        # Allow the computer's opening move to finish.
+        fake_engine.release_first_search.set()
+        assert wait_for_condition(
+            qt_app,
+            lambda: len(window.game.board.move_stack) == 1
+            and window.game.board.turn == chess.BLACK,
+        )
+
+        # Undo the opening. The computer must play again as White.
+        window.undo_move()
+
+        assert wait_for_condition(
+            qt_app,
+            lambda: fake_engine.calls >= 2
+            and len(window.game.board.move_stack) == 1
+            and window.game.board.turn == chess.BLACK,
+        )
+
+    finally:
+        fake_engine.release_first_search.set()
+        wait_for_condition(
+            qt_app,
+            lambda: (
+                window._stockfish_worker is None
+                or not window._stockfish_worker.isRunning()
+            ),
+            timeout=6,
+        )
+        window.close()
+        qt_app.processEvents()

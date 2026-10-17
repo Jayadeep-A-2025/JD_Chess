@@ -2,6 +2,7 @@
 
 import os
 import shutil
+import sys
 
 import chess
 import chess.engine
@@ -27,20 +28,53 @@ class StockfishEngine:
 
     @staticmethod
     def find_engine():
+        """Find Stockfish in configured, bundled, or system locations."""
         configured_path = os.environ.get("STOCKFISH_PATH")
         if configured_path and os.path.isfile(configured_path):
             return configured_path
+
+        bundle_dir = getattr(sys, "_MEIPASS", None)
+        executable_dir = os.path.dirname(os.path.abspath(sys.executable))
+        project_root = os.path.dirname(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        )
+
+        candidates = []
+
+        if bundle_dir:
+            candidates.extend([
+                os.path.join(bundle_dir, "assets", "stockfish"),
+                os.path.join(bundle_dir, "assets", "stockfish.exe"),
+            ])
+
+        candidates.extend([
+            os.path.join(executable_dir, "assets", "stockfish"),
+            os.path.join(executable_dir, "assets", "stockfish.exe"),
+            os.path.join(executable_dir, "stockfish"),
+            os.path.join(executable_dir, "stockfish.exe"),
+            os.path.join(project_root, "assets", "stockfish"),
+            os.path.join(project_root, "assets", "stockfish.exe"),
+        ])
+
+        for candidate in candidates:
+            if os.path.isfile(candidate):
+                return candidate
 
         discovered = shutil.which("stockfish")
         if discovered:
             return discovered
 
-        for path in (
+        if os.name == "nt":
+            discovered = shutil.which("stockfish.exe")
+            if discovered:
+                return discovered
+
+        for candidate in (
             "/opt/homebrew/bin/stockfish",
             "/usr/local/bin/stockfish",
         ):
-            if os.path.isfile(path):
-                return path
+            if os.path.isfile(candidate):
+                return candidate
 
         return None
 
