@@ -1087,3 +1087,24 @@ class MainWindow(QMainWindow):
         self.close_engine()
         event.accept()
 
+def undo_move(self):
+        self.cancel_pending_computer_move()
+        if self.is_computer_mode():
+            if self.is_human_turn():
+                # Both player and computer had moved; undo both to return to player
+                for _ in range(2):
+                    if self.game.board.move_stack:
+                        self.game.undo_move()
+            else:
+                # Computer was thinking; undo player's last move
+                if self.game.board.move_stack:
+                    self.game.undo_move()
+        elif self.game.board.move_stack:
+            self.game.undo_move()
+
+        self.board_widget.clear_selection()
+        self.update_game_info()
+
+        # FIX: If it is now the computer's turn after undoing, trigger its move
+        if self.is_computer_mode() and not self.is_human_turn() and not self.game.board.is_game_over():
+            self.make_computer_move()
