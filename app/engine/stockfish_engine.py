@@ -30,30 +30,48 @@ class ComputerEngine:
 
     @staticmethod
     def find_engine() -> str | None:
-        """Find Computer engine in configured, bundled, or system locations."""
-        configured_path = os.environ.get("COMPUTER_PATH") or os.environ.get("STOCKFISH_PATH")
+        """Find a configured, bundled, or system chess engine."""
+        configured_path = (
+            os.environ.get("COMPUTER_PATH")
+            or os.environ.get("STOCKFISH_PATH")
+        )
         if configured_path and os.path.isfile(configured_path):
             return configured_path
 
-        bundle_dir = getattr(sys, "_MEIPASS", None)
         executable_dir = os.path.dirname(os.path.abspath(sys.executable))
         project_root = os.path.dirname(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         )
+        bundle_dir = getattr(sys, "_MEIPASS", None)
 
         candidates = []
 
+        # PyInstaller one-file bundle.
         if bundle_dir:
             candidates.extend([
                 os.path.join(bundle_dir, "assets", "stockfish"),
                 os.path.join(bundle_dir, "assets", "stockfish.exe"),
             ])
 
+        # Executable-relative assets.
         candidates.extend([
             os.path.join(executable_dir, "assets", "stockfish"),
             os.path.join(executable_dir, "assets", "stockfish.exe"),
             os.path.join(executable_dir, "stockfish"),
             os.path.join(executable_dir, "stockfish.exe"),
+        ])
+
+        # macOS app: JD_Chess.app/Contents/Resources/assets/
+        macos_resources = os.path.abspath(
+            os.path.join(executable_dir, "..", "Resources")
+        )
+        candidates.extend([
+            os.path.join(macos_resources, "assets", "stockfish"),
+            os.path.join(macos_resources, "assets", "stockfish.exe"),
+        ])
+
+        # Development checkout.
+        candidates.extend([
             os.path.join(project_root, "assets", "stockfish"),
             os.path.join(project_root, "assets", "stockfish.exe"),
         ])

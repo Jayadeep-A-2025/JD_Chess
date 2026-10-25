@@ -15,6 +15,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.ui.styles import combo_style
+
 
 class SetupScreen(QWidget):
     """Game Setup screen with mode, side, difficulty selection, and Start Game action."""
@@ -91,51 +93,7 @@ class SetupScreen(QWidget):
         card_desc.setWordWrap(True)
         card_layout.addWidget(card_desc)
 
-        # Combo box styling
-        icons_dir = Path(__file__).resolve().parent.parent.parent / "assets" / "icons"
-        chevron_path = (icons_dir / "chevron-down.svg").as_posix()
-        combo_style = f"""
-            QComboBox {{
-                background-color: #FFFFFF;
-                color: #0F172A;
-                border: 1.5px solid #CBD5E1;
-                border-radius: 8px;
-                padding: 8px 12px;
-                font-size: 13px;
-                font-weight: 500;
-                min-height: 26px;
-            }}
-            QComboBox:hover {{ border-color: #94A3B8; }}
-            QComboBox:focus {{ border-color: #2563EB; }}
-            QComboBox:disabled {{
-                background-color: #F1F5F9;
-                color: #94A3B8;
-                border-color: #E2E8F0;
-            }}
-            QComboBox::drop-down {{
-                subcontrol-origin: padding;
-                subcontrol-position: top right;
-                width: 28px;
-                border-left: 1px solid #E2E8F0;
-                border-top-right-radius: 8px;
-                border-bottom-right-radius: 8px;
-            }}
-            QComboBox::down-arrow {{
-                image: url("{chevron_path}");
-                width: 12px;
-                height: 12px;
-            }}
-            QComboBox QAbstractItemView {{
-                background-color: #FFFFFF;
-                color: #0F172A;
-                border: 1px solid #CBD5E1;
-                border-radius: 8px;
-                selection-background-color: #2563EB;
-                selection-color: #FFFFFF;
-                padding: 4px;
-                outline: none;
-            }}
-        """
+        style_sheet = combo_style()
 
         # 1. Mode Selection
         mode_label = QLabel("Game Mode")
@@ -145,7 +103,7 @@ class SetupScreen(QWidget):
         self.mode_combo = QComboBox()
         self.mode_combo.setObjectName("modeCombo")
         self.mode_combo.addItems([self.LOCAL_MODE, self.COMPUTER_MODE])
-        self.mode_combo.setStyleSheet(combo_style)
+        self.mode_combo.setStyleSheet(style_sheet)
         self.mode_combo.currentTextChanged.connect(self._on_mode_changed)
         card_layout.addWidget(self.mode_combo)
 
@@ -158,7 +116,7 @@ class SetupScreen(QWidget):
         self.color_combo.setObjectName("colorCombo")
         self.color_combo.addItems(["White", "Black"])
         self.color_combo.setCurrentText("White")
-        self.color_combo.setStyleSheet(combo_style)
+        self.color_combo.setStyleSheet(style_sheet)
         card_layout.addWidget(self.color_combo)
 
         # 3. Computer Difficulty
@@ -170,7 +128,7 @@ class SetupScreen(QWidget):
         self.difficulty_combo.setObjectName("difficultyCombo")
         self.difficulty_combo.addItems(["Easy", "Medium", "Hard"])
         self.difficulty_combo.setCurrentText("Medium")
-        self.difficulty_combo.setStyleSheet(combo_style)
+        self.difficulty_combo.setStyleSheet(style_sheet)
         card_layout.addWidget(self.difficulty_combo)
 
         self.difficulty_hint = QLabel("(Select 'Play vs Computer' to activate difficulty)")

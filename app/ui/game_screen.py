@@ -26,6 +26,7 @@ class GameScreen(QWidget):
     undo_move_clicked = Signal()
     restart_game_clicked = Signal()
     main_menu_clicked = Signal()
+    analyze_game_clicked = Signal()
 
     def __init__(self, game: ChessGame, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -205,6 +206,28 @@ class GameScreen(QWidget):
         btn_row.addWidget(self.new_game_button)
         btn_row.addWidget(self.undo_button)
         sidebar_layout.addLayout(btn_row)
+
+        self.analyze_button = QPushButton("🔍 Analyze Game & Better Moves")
+        self.analyze_button.setObjectName("gameScreenAnalyzeBtn")
+        self.analyze_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.analyze_button.setMinimumHeight(38)
+        self.analyze_button.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #F8FAFC;
+                color: #2563EB;
+                border: 1.5px solid #BFDBFE;
+                border-radius: 8px;
+                padding: 6px 14px;
+                font-size: 13px;
+                font-weight: 700;
+            }
+            QPushButton:hover { background-color: #EFF6FF; border-color: #3B82F6; }
+            QPushButton:pressed { background-color: #DBEAFE; }
+            """
+        )
+        self.analyze_button.clicked.connect(self.analyze_game_clicked.emit)
+        sidebar_layout.addWidget(self.analyze_button)
 
         # MOVE HISTORY CARD
         history_card = QFrame()

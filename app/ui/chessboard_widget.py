@@ -3,7 +3,7 @@ from __future__ import annotations
 """Chessboard widget with coordinate labels, highlighting, and responsive sizing."""
 
 import chess
-from PySide6.QtCore import QSize, Qt
+from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtWidgets import (
     QFrame,
     QLabel,
@@ -59,6 +59,8 @@ def compute_captured_pieces(move_stack: list[chess.Move]) -> tuple[list[str], li
 
 class ChessBoardWidget(QWidget):
     """Clickable chessboard with selectable orientation and coordinate labels."""
+
+    move_made = Signal(str)
 
     def __init__(self, game: ChessGame, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -205,6 +207,7 @@ class ChessBoardWidget(QWidget):
                 else:
                     self.clear_selection()
                     self.refresh()
+                    self.move_made.emit(move.uci())
                     on_human_move = getattr(window, "on_human_move_made", None)
                     if callable(on_human_move):
                         on_human_move()

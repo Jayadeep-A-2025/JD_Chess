@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-"""Main application window managing the three-step window navigation flow."""
+"""Main application window managing multi-window navigation and game lifecycle."""
 
 from pathlib import Path
 
 import chess
 from PySide6.QtCore import QSize, Qt, QThread, QTimer, Signal
 from PySide6.QtWidgets import (
+    QApplication,
     QMainWindow,
     QMessageBox,
     QStackedWidget,
@@ -15,14 +16,20 @@ from PySide6.QtWidgets import (
 
 from app.core.chess_game import ChessGame
 from app.engine.stockfish_engine import ComputerEngine, StockfishEngine
+from app.services.history_manager import HistoryManager, MatchRecord
 from app.services.save_manager import SaveManager, SaveSlot
+from app.services.user_profile_manager import UserProfileManager
+from app.ui.analysis_dialog import AnalysisDialog
 from app.ui.chessboard_widget import (
     ChessBoardWidget,
     PIECE_GLYPHS,
     compute_captured_pieces,
 )
+from app.ui.game_over_dialog import GameOverDialog
 from app.ui.game_screen import GameScreen
+from app.ui.history_screen import HistoryScreen
 from app.ui.home_screen import HomeScreen
+from app.ui.learn_screen import LearnScreen
 from app.ui.save_slots_dialog import SaveSlotsDialog
 from app.ui.setup_screen import SetupScreen
 
@@ -55,13 +62,19 @@ StockfishWorker = ComputerWorker
 
 
 class MainWindow(QMainWindow):
-    """Main application window coordinating the 3-step screen flow: Home -> Setup -> Board."""
+    """Main application window coordinating the multi-screen navigation flow."""
 
     LOCAL_MODE = "Local 2-player"
     COMPUTER_MODE = "Play vs Computer"
     POST_THINKING_DELAY_MS: int = 1500
 
-    def __init__(self, start_screen: str = "home", save_manager: SaveManager | None = None):
+    def __init__(
+        self,
+        start_screen: str = "home",
+        save_manager: SaveManager | None = None,
+        profile_manager: UserProfileManager | None = None,
+        history_manager: HistoryManager | None = None,
+    ):
         super().__init__()
         self.setWindowTitle("JD Chess")
         self.resize(1060, 750)
@@ -72,6 +85,10 @@ class MainWindow(QMainWindow):
         self.engine_error = None
         self.player_color = chess.BLACK
         self.save_manager = save_manager or SaveManager()
+        self.profile_manager = profile_manager or UserProfileManager()
+        self.history_manager = history_manager or HistoryManager()
+
+        self._game_over_processed = False
 
         # Engine detection
         detected_engine = ComputerEngine.find_engine()
@@ -93,19 +110,24 @@ class MainWindow(QMainWindow):
         self.white_captured_pieces = []
         self.black_captured_pieces = []
 
-        # Stacked Widget hosting the 3 screens
+        # Stacked Widget hosting all application screens
         self.stack = QStackedWidget(self)
         self.setCentralWidget(self.stack)
 
         # 1. Window 1: Main Home Menu
         self.home_screen = HomeScreen(
             save_manager=self.save_manager,
+            profile_manager=self.profile_manager,
+            history_manager=self.history_manager,
             engine_ready=self.engine_ready,
             engine_path=self.engine_path,
             parent=self,
         )
         self.home_screen.new_game_clicked.connect(self.navigate_to_setup)
         self.home_screen.continue_game_clicked.connect(self.open_continue_dialog)
+        self.home_screen.learn_chess_clicked.connect(self.navigate_to_learn)
+        self.home_screen.history_clicked.connect(self.navigate_to_history)
+        self.home_screen.username_changed.connect(self._on_username_changed)
         self.stack.addWidget(self.home_screen)
 
         # 2. Window 2: Game Setup & Configuration
@@ -123,7 +145,22 @@ class MainWindow(QMainWindow):
         self.game_screen.undo_move_clicked.connect(self.undo_move)
         self.game_screen.restart_game_clicked.connect(self.navigate_to_setup)
         self.game_screen.main_menu_clicked.connect(self.navigate_to_home)
+        self.game_screen.analyze_game_clicked.connect(self.open_analysis_dialog)
         self.stack.addWidget(self.game_screen)
+
+        # 4. Interactive Learning Screen (Learn Chess with companion CM)
+        self.learn_screen = LearnScreen(
+            profile_manager=self.profile_manager, parent=self
+        )
+        self.learn_screen.main_menu_clicked.connect(self.navigate_to_home)
+        self.stack.addWidget(self.learn_screen)
+
+        # 5. History & Rating Dashboard Screen
+        self.history_screen = HistoryScreen(
+            history_manager=self.history_manager, parent=self
+        )
+        self.history_screen.back_clicked.connect(self.navigate_to_home)
+        self.stack.addWidget(self.history_screen)
 
         # Backward compatibility aliases for existing attributes and tests
         self.board_widget = self.game_screen.board_widget
@@ -146,6 +183,10 @@ class MainWindow(QMainWindow):
             self.navigate_to_game()
         elif start_screen == "setup":
             self.navigate_to_setup()
+        elif start_screen == "learn":
+            self.navigate_to_learn()
+        elif start_screen == "history":
+            self.navigate_to_history()
         else:
             self.navigate_to_home()
 
@@ -165,6 +206,7 @@ class MainWindow(QMainWindow):
     def navigate_to_home(self) -> None:
         """Switch to Window 1: Main Home Menu."""
         self.home_screen.update_save_status()
+        self.home_screen.update_profile_ui()
         self.stack.setCurrentWidget(self.home_screen)
 
     def navigate_to_setup(self) -> None:
@@ -176,6 +218,22 @@ class MainWindow(QMainWindow):
         self.stack.setCurrentWidget(self.game_screen)
         self.board_widget.update_square_geometry()
         self.board_widget.refresh()
+
+    def navigate_to_learn(self) -> None:
+        """Switch to Interactive Learn Screen with companion CM."""
+        self.learn_screen.load_lesson(self.learn_screen.current_lesson)
+        self.stack.setCurrentWidget(self.learn_screen)
+        self.learn_screen.board_widget.update_square_geometry()
+        self.learn_screen.board_widget.refresh()
+
+    def navigate_to_history(self) -> None:
+        """Switch to History & Player Rating Screen."""
+        self.history_screen.refresh()
+        self.stack.setCurrentWidget(self.history_screen)
+
+    def _on_username_changed(self, new_name: str) -> None:
+        if hasattr(self, "learn_screen"):
+            self.learn_screen.load_lesson(self.learn_screen.current_lesson)
 
     def start_game_from_setup(self) -> None:
         """User clicked 'Start Game' on Window 2."""
@@ -242,7 +300,6 @@ class MainWindow(QMainWindow):
             status_text=status_text,
         )
 
-        from PySide6.QtWidgets import QApplication
         if show_confirmation and QApplication.platformName() != "offscreen":
             QMessageBox.information(
                 self,
@@ -255,12 +312,12 @@ class MainWindow(QMainWindow):
         """Load and resume a match from the selected slot."""
         slot = self.save_manager.get_slot(slot_id)
         if not slot or not slot.is_active:
-            from PySide6.QtWidgets import QApplication
             if QApplication.platformName() != "offscreen":
                 QMessageBox.warning(self, "Empty Slot", "This slot contains no saved game data.")
             return
 
         self.cancel_pending_computer_move()
+        self._game_over_processed = False
 
         # Restore match settings
         self.setup_screen.mode_combo.blockSignals(True)
@@ -399,6 +456,7 @@ class MainWindow(QMainWindow):
 
     def start_new_game(self) -> None:
         self.cancel_pending_computer_move()
+        self._game_over_processed = False
         self.game.new_game()
         self.board_widget.clear_selection()
         self.board_widget.set_orientation(self.player_color)
@@ -432,7 +490,6 @@ class MainWindow(QMainWindow):
         self._computer_request_id += 1
         req_id = self._computer_request_id
 
-        # Pass a copy of the board to the background worker to protect live state
         board_copy = self.game.board.copy()
         difficulty = self.setup_screen.difficulty_combo.currentText()
 
@@ -451,7 +508,6 @@ class MainWindow(QMainWindow):
     def _on_computer_worker_finished(self) -> None:
         worker = self.sender()
 
-        # Ignore callbacks from workers that have already been retired.
         if worker is not self._computer_worker:
             return
 
@@ -464,7 +520,6 @@ class MainWindow(QMainWindow):
         if self._shutting_down or not request_was_stale:
             return
 
-        # A restart, undo, or other state change invalidated the old search.
         if (
             self.is_computer_mode()
             and not self.game.board.is_game_over()
@@ -474,7 +529,6 @@ class MainWindow(QMainWindow):
         ):
             self.make_computer_move()
 
-    # Backward compatibility hook
     _on_stockfish_worker_finished = _on_computer_worker_finished
 
     def _on_computer_move_ready(self, req_id: int, uci_move: str | None) -> None:
@@ -593,6 +647,93 @@ class MainWindow(QMainWindow):
 
         self.board_widget.refresh()
 
+        # Handle Game Over triggers and recording
+        if status.is_game_over and not self._game_over_processed:
+            self._game_over_processed = True
+            self._process_game_over(status, mode_text, diff_text)
+
+    def _process_game_over(self, status, mode_text: str, diff_text: str) -> None:
+        """Record game completion in history and trigger post-game feedback dialog."""
+        player_color_str = "White" if self.player_color == chess.WHITE else "Black"
+
+        if status.is_checkmate:
+            # The player whose turn it is has no legal move and is checkmated
+            if self.game.board.turn != self.player_color:
+                result = "win"
+                result_label = "Checkmate – You Won!"
+            else:
+                if self.is_computer_mode():
+                    result = "loss"
+                    result_label = "Checkmate – Computer Won"
+                else:
+                    winner = "White" if self.game.board.turn == chess.BLACK else "Black"
+                    result = "win"
+                    result_label = f"Checkmate – {winner} Won"
+        elif status.is_stalemate:
+            result = "draw"
+            result_label = "Draw – Stalemate"
+        else:
+            result = "draw"
+            result_label = f"Draw – {status.termination}"
+
+        # Record match in player history and update Elo rating
+        self.history_manager.record_match(
+            game_mode=mode_text,
+            player_color=player_color_str,
+            difficulty=diff_text,
+            result=result,
+            result_label=result_label,
+            moves=self.game.get_uci_moves(),
+        )
+
+        # Show styled GameOverDialog unless running in headless test mode
+        if QApplication.platformName() != "offscreen":
+            QTimer.singleShot(
+                400,
+                lambda: self._show_game_over_dialog(
+                    result=result,
+                    result_label=result_label,
+                    game_mode=mode_text,
+                    player_color=player_color_str,
+                    difficulty=diff_text,
+                ),
+            )
+
+    def _show_game_over_dialog(
+        self,
+        result: str,
+        result_label: str,
+        game_mode: str,
+        player_color: str,
+        difficulty: str,
+    ) -> None:
+        moves = self.game.get_uci_moves()
+        dialog = GameOverDialog(
+            result=result,
+            result_label=result_label,
+            move_count=len(moves),
+            game_mode=game_mode,
+            player_color=player_color,
+            difficulty=difficulty,
+            can_analyze=True,
+            parent=self,
+        )
+        dialog.analyze_clicked.connect(self.open_analysis_dialog)
+        dialog.new_game_clicked.connect(self.navigate_to_setup)
+        dialog.exec()
+
+    def open_analysis_dialog(self) -> None:
+        """Open post-game analysis window with scorecard and move annotations."""
+        color_str = "White" if self.player_color == chess.WHITE else "Black"
+        dialog = AnalysisDialog(
+            uci_moves=self.game.get_uci_moves(),
+            san_moves=self.game.get_move_history(),
+            player_color=color_str,
+            engine_path=self.engine_path,
+            parent=self,
+        )
+        dialog.exec()
+
     def undo_move(self) -> None:
         computer_mode = self.is_computer_mode()
         human_turn_before_undo = (
@@ -601,6 +742,7 @@ class MainWindow(QMainWindow):
         move_count = len(self.game.board.move_stack)
 
         self.cancel_pending_computer_move()
+        self._game_over_processed = False
 
         if computer_mode:
             if human_turn_before_undo:
