@@ -200,15 +200,26 @@ class ChessBoardWidget(QWidget):
                 )
 
             if move in self.game.board.legal_moves:
+                was_capture = self.game.board.is_capture(move)
+
                 try:
                     self.game.make_move(move.uci())
                 except ValueError:
                     pass
                 else:
+                    sound_manager = getattr(window, "sound_manager", None)
+                    if sound_manager is not None:
+                        sound_manager.play(
+                            "capture" if was_capture else "move"
+                        )
+
                     self.clear_selection()
                     self.refresh()
                     self.move_made.emit(move.uci())
-                    on_human_move = getattr(window, "on_human_move_made", None)
+
+                    on_human_move = getattr(
+                        window, "on_human_move_made", None
+                    )
                     if callable(on_human_move):
                         on_human_move()
                     return

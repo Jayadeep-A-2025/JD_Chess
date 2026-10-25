@@ -15,10 +15,12 @@ from PySide6.QtWidgets import (
 )
 
 from app.core.chess_game import ChessGame
+from app.services.sound_manager import SoundManager
 from app.engine.stockfish_engine import ComputerEngine, StockfishEngine
 from app.services.history_manager import HistoryManager, MatchRecord
 from app.services.save_manager import SaveManager, SaveSlot
 from app.services.user_profile_manager import UserProfileManager
+from app.services.sound_manager import SoundManager
 from app.ui.analysis_dialog import AnalysisDialog
 from app.ui.chessboard_widget import (
     ChessBoardWidget,
@@ -90,6 +92,11 @@ class MainWindow(QMainWindow):
         self.profile_manager = profile_manager or UserProfileManager()
         self.history_manager = history_manager or HistoryManager()
 
+        self.sound_manager = SoundManager(
+            enabled=self.profile_manager.get_profile().sound_enabled,
+            parent=self,
+        )
+
         self._game_over_processed = False
 
         # Engine detection
@@ -134,8 +141,14 @@ class MainWindow(QMainWindow):
 
         # 2. Window 2: Game Setup & Configuration
         self.setup_screen = SetupScreen(parent=self)
-        self.setup_screen.start_game_clicked.connect(self.start_game_from_setup)
+        self.setup_screen.sound_checkbox.setChecked(
+            self.sound_manager.enabled
+        )
+        self.setup_screen.sound_checkbox.toggled.connect(
+            self._on_sound_preference_changed
+        )
         self.setup_screen.back_to_menu_clicked.connect(self.navigate_to_home)
+        self.setup_screen.start_game_clicked.connect(self.start_game_from_setup)
         self.setup_screen.mode_combo.currentTextChanged.connect(self.change_mode)
         self.setup_screen.color_combo.currentTextChanged.connect(self.change_color)
         self.setup_screen.difficulty_combo.currentTextChanged.connect(self.update_game_info)
@@ -236,6 +249,20 @@ class MainWindow(QMainWindow):
     def _on_username_changed(self, new_name: str) -> None:
         if hasattr(self, "learn_screen"):
             self.learn_screen.load_lesson(self.learn_screen.current_lesson)
+    
+    def _on_sound_preference_changed(self, enabled: bool) -> None:
+        """Apply and persist the user's sound preference."""
+        self.sound_manager.set_enabled(enabled)
+
+        profile = self.profile_manager.get_profile()
+        profile.sound_enabled = enabled
+        self.profile_manager.save_profile(profile)
+
+    def _on_sound_preference_changed(self, enabled: bool) -> None:
+        self.sound_manager.set_enabled(enabled)
+        profile = self.profile_manager.get_profile()
+        profile.sound_enabled = enabled
+        self.profile_manager.save_profile(profile)
 
     def start_game_from_setup(self) -> None:
         """User clicked 'Start Game' on Window 2."""
