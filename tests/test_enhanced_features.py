@@ -369,3 +369,146 @@ def test_no_stockfish_in_user_facing_ui(qt_app):
             assert "Stockfish" not in item
 
         window.close()
+
+
+# =====================================================================
+# 8. Dialog Button Visibility & Form Controls Tests
+# =====================================================================
+
+def test_edit_username_dialog_and_visibility(qt_app):
+    from app.ui.home_screen import EditUsernameDialog
+
+    dialog = EditUsernameDialog("Grandmaster")
+    dialog.show()
+    qt_app.processEvents()
+    assert dialog.input_field.text() == "Grandmaster"
+    assert dialog.save_button.isVisible()
+    assert dialog.cancel_button.isVisible()
+    assert dialog.save_button.minimumHeight() >= 40
+    assert dialog.cancel_button.minimumHeight() >= 40
+
+    # Test updating input
+    dialog.input_field.setText("ChessHero")
+    assert dialog.get_username() == "ChessHero"
+
+    # Test blank defaults to Grandmaster
+    dialog.input_field.setText("   ")
+    assert dialog.get_username() == "Grandmaster"
+    dialog.close()
+
+
+def test_game_over_dialog_touch_buttons(qt_app):
+    from app.ui.game_over_dialog import GameOverDialog
+
+    dialog = GameOverDialog(
+        result="win",
+        result_label="Checkmate – You Won!",
+        move_count=24,
+        game_mode="Play vs Computer",
+        player_color="White",
+        difficulty="Medium",
+        parent=None,
+    )
+    assert dialog.play_again_button.minimumHeight() >= 44
+    assert dialog.analyze_button.minimumHeight() >= 44
+    assert dialog.home_button.minimumHeight() >= 44
+    dialog.close()
+
+
+def test_save_slots_dialog_mobile_and_buttons(qt_app):
+    from app.ui.save_slots_dialog import SaveSlotsDialog
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        sm = SaveManager(Path(tmpdir) / "saves.json")
+        dialog = SaveSlotsDialog(save_manager=sm, mode="save")
+        dialog.show()
+        qt_app.processEvents()
+        assert dialog.minimumWidth() <= 400
+        assert dialog.close_button.minimumHeight() >= 40
+        dialog.close()
+
+
+def test_setup_screen_form_controls(qt_app):
+    from app.ui.setup_screen import SetupScreen
+
+    screen = SetupScreen()
+    assert screen.mode_combo.minimumHeight() >= 40
+    assert screen.color_combo.minimumHeight() >= 40
+    assert screen.difficulty_combo.minimumHeight() >= 40
+    assert screen.start_game_button.minimumHeight() >= 44
+
+    # Checkboxes present & checked
+    assert screen.sound_checkbox.isChecked()
+    assert screen.hints_checkbox.isChecked()
+    screen.close()
+
+
+# =====================================================================
+# 9. Mobile Responsive Layout Adaptation Tests
+# =====================================================================
+
+def test_game_screen_mobile_layout_adaptation(qt_app):
+    from app.ui.game_screen import GameScreen
+    from PySide6.QtGui import QResizeEvent
+    from PySide6.QtCore import QSize
+
+    gs = GameScreen(ChessGame())
+
+    # Resize to mobile portrait width (< 768px)
+    event_narrow = QResizeEvent(QSize(400, 700), QSize(1000, 700))
+    gs.resize(400, 700)
+    gs.resizeEvent(event_narrow)
+    assert gs._is_narrow_layout is True
+
+    # Resize to desktop width (>= 768px)
+    event_wide = QResizeEvent(QSize(900, 700), QSize(400, 700))
+    gs.resize(900, 700)
+    gs.resizeEvent(event_wide)
+    assert gs._is_narrow_layout is False
+    gs.close()
+
+
+def test_home_screen_mobile_grid_adaptation(qt_app):
+    from PySide6.QtGui import QResizeEvent
+    from PySide6.QtCore import QSize
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        sm = SaveManager(Path(tmpdir) / "saves.json")
+        pm = UserProfileManager(Path(tmpdir) / "profile.json")
+        hm = HistoryManager(Path(tmpdir) / "history.json")
+
+        hs = HomeScreen(
+            save_manager=sm,
+            profile_manager=pm,
+            history_manager=hm,
+        )
+
+        # Mobile width (< 640px) -> single column
+        event_mobile = QResizeEvent(QSize(420, 700), QSize(900, 700))
+        hs.resize(420, 700)
+        hs.resizeEvent(event_mobile)
+        assert hs._grid_columns == 1
+
+        # Desktop width (>= 640px) -> 2 columns
+        event_desktop = QResizeEvent(QSize(800, 700), QSize(420, 700))
+        hs.resize(800, 700)
+        hs.resizeEvent(event_desktop)
+        assert hs._grid_columns == 2
+        hs.close()
+
+
+def test_main_window_minimum_mobile_size(qt_app):
+    with tempfile.TemporaryDirectory() as tmpdir:
+        sm = SaveManager(Path(tmpdir) / "saves.json")
+        pm = UserProfileManager(Path(tmpdir) / "profile.json")
+        hm = HistoryManager(Path(tmpdir) / "history.json")
+
+        window = MainWindow(
+            start_screen="home",
+            save_manager=sm,
+            profile_manager=pm,
+            history_manager=hm,
+        )
+        assert window.minimumWidth() <= 360
+        assert window.minimumHeight() <= 480
+        window.close()

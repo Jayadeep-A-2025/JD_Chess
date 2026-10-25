@@ -47,18 +47,19 @@ class HistoryScreen(QWidget):
 
         back_btn = QPushButton("← Back to Menu")
         back_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        back_btn.setMinimumHeight(40)
         back_btn.setStyleSheet(
             """
             QPushButton {
                 background-color: transparent;
                 color: #94A3B8;
-                border: 1px solid #334155;
+                border: 1.5px solid #334155;
                 border-radius: 8px;
-                padding: 6px 14px;
+                padding: 8px 16px;
                 font-size: 13px;
                 font-weight: 600;
             }
-            QPushButton:hover { background-color: #1E293B; color: #F1F5F9; }
+            QPushButton:hover { background-color: #1E293B; color: #F1F5F9; border-color: #64748B; }
             """
         )
         back_btn.clicked.connect(self.back_clicked.emit)

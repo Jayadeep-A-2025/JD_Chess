@@ -1,15 +1,18 @@
 from __future__ import annotations
 
-"""Window 1: Main Home Menu with User Profile, CM Greetings, and 4 Primary Paths."""
+"""Window 1: Main Home Menu with User Profile, CM Greetings, 4 Primary Paths, and Mobile Responsive Layout."""
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
+    QDialog,
     QFrame,
     QGridLayout,
     QHBoxLayout,
-    QInputDialog,
     QLabel,
+    QLineEdit,
     QPushButton,
+    QScrollArea,
+    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
@@ -17,6 +20,77 @@ from PySide6.QtWidgets import (
 from app.services.history_manager import HistoryManager
 from app.services.save_manager import SaveManager
 from app.services.user_profile_manager import UserProfileManager
+from app.ui.styles import PRIMARY_BTN, SECONDARY_BTN
+
+
+class EditUsernameDialog(QDialog):
+    """High-contrast, mobile-friendly dialog to edit custom username with bold, visible buttons."""
+
+    def __init__(self, current_name: str, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Change Username")
+        self.setModal(True)
+        self.setMinimumWidth(300)
+        self.setMaximumWidth(420)
+        self.setStyleSheet("QDialog { background-color: #FFFFFF; }")
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(16)
+
+        title = QLabel("Edit Player Name")
+        title.setStyleSheet("font-size: 18px; font-weight: 800; color: #0F172A;")
+        layout.addWidget(title)
+
+        desc = QLabel("Enter your username for companion CM dialogues and match records:")
+        desc.setWordWrap(True)
+        desc.setStyleSheet("font-size: 13px; color: #475569; font-weight: 500;")
+        layout.addWidget(desc)
+
+        self.input_field = QLineEdit()
+        self.input_field.setText(current_name)
+        self.input_field.selectAll()
+        self.input_field.setMinimumHeight(44)
+        self.input_field.setStyleSheet(
+            """
+            QLineEdit {
+                background-color: #FFFFFF;
+                color: #0F172A;
+                border: 2px solid #2563EB;
+                border-radius: 8px;
+                padding: 8px 14px;
+                font-size: 14px;
+                font-weight: 600;
+            }
+            """
+        )
+        layout.addWidget(self.input_field)
+
+        btn_row = QHBoxLayout()
+        btn_row.setSpacing(10)
+
+        self.cancel_btn = QPushButton("Cancel")
+        self.cancel_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.cancel_btn.setMinimumHeight(44)
+        self.cancel_btn.setStyleSheet(SECONDARY_BTN)
+        self.cancel_btn.clicked.connect(self.reject)
+        btn_row.addWidget(self.cancel_btn)
+
+        self.save_btn = QPushButton("Save Name")
+        self.save_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.save_btn.setMinimumHeight(44)
+        self.save_btn.setStyleSheet(PRIMARY_BTN)
+        self.save_btn.clicked.connect(self.accept)
+        btn_row.addWidget(self.save_btn)
+
+        self.cancel_button = self.cancel_btn
+        self.save_button = self.save_btn
+
+        layout.addLayout(btn_row)
+
+    def get_username(self) -> str:
+    	username = self.input_field.text().strip()
+    	return username if username else "Grandmaster"
 
 
 class HomeScreen(QWidget):
@@ -43,12 +117,26 @@ class HomeScreen(QWidget):
         self.history_manager = history_manager or HistoryManager()
         self.engine_ready = engine_ready
         self.engine_path = engine_path
+        self._is_mobile_grid = False
 
         self.setStyleSheet("QWidget { background-color: #F8FAFC; }")
 
-        main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(32, 24, 32, 28)
-        main_layout.setSpacing(20)
+        root_layout = QVBoxLayout(self)
+        root_layout.setContentsMargins(0, 0, 0, 0)
+        root_layout.setSpacing(0)
+
+        # Scroll area wrapping all home content for small screen / mobile adaptability
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+        self.scroll_area.setStyleSheet("QScrollArea { background: transparent; border: none; }")
+        self.scroll_area.viewport().setStyleSheet("background: transparent;")
+
+        self.scroll_content = QWidget()
+        self.scroll_content.setStyleSheet("background: transparent;")
+        main_layout = QVBoxLayout(self.scroll_content)
+        main_layout.setContentsMargins(20, 20, 20, 24)
+        main_layout.setSpacing(18)
 
         # -------------------------------------------------------------
         # TOP BAR: User Profile & Companion CM Greeting
@@ -56,16 +144,14 @@ class HomeScreen(QWidget):
         profile_card = self._build_profile_card()
         main_layout.addWidget(profile_card)
 
-        main_layout.addStretch(1)
-
         # -------------------------------------------------------------
         # CENTER CONTAINER: Hero Branding & 4 Primary Choice Cards
         # -------------------------------------------------------------
-        center_container = QWidget()
-        center_container.setMaximumWidth(760)
-        center_layout = QVBoxLayout(center_container)
+        self.center_container = QWidget()
+        self.center_container.setMaximumWidth(760)
+        center_layout = QVBoxLayout(self.center_container)
         center_layout.setContentsMargins(0, 0, 0, 0)
-        center_layout.setSpacing(22)
+        center_layout.setSpacing(20)
 
         # HERO HEADER
         hero_layout = QVBoxLayout()
@@ -75,21 +161,22 @@ class HomeScreen(QWidget):
         emblem = QLabel("♔")
         emblem.setAlignment(Qt.AlignmentFlag.AlignCenter)
         emblem.setStyleSheet(
-            "font-size: 50px; color: #1E293B; background: #FFFFFF; "
-            "border: 2px solid #E2E8F0; border-radius: 36px; "
-            "min-width: 72px; max-width: 72px; min-height: 72px; max-height: 72px;"
+            "font-size: 46px; color: #1E293B; background: #FFFFFF; "
+            "border: 2px solid #E2E8F0; border-radius: 34px; "
+            "min-width: 68px; max-width: 68px; min-height: 68px; max-height: 68px;"
         )
         hero_layout.addWidget(emblem, 0, Qt.AlignmentFlag.AlignCenter)
 
         title = QLabel("JD CHESS")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title.setStyleSheet(
-            "font-size: 34px; font-weight: 900; color: #0F172A; letter-spacing: 1.5px;"
+            "font-size: 32px; font-weight: 900; color: #0F172A; letter-spacing: 1.5px;"
         )
         hero_layout.addWidget(title)
 
         subtitle = QLabel("Play, learn, and master chess with intelligent offline computer analysis.")
         subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        subtitle.setWordWrap(True)
         subtitle.setStyleSheet("font-size: 13px; color: #64748B; font-weight: 500;")
         hero_layout.addWidget(subtitle)
 
@@ -102,10 +189,10 @@ class HomeScreen(QWidget):
         center_layout.addLayout(hero_layout)
 
         # -------------------------------------------------------------
-        # 4 PRIMARY CHOICES (2x2 Grid)
+        # 4 PRIMARY CHOICES (Responsive Grid)
         # -------------------------------------------------------------
-        grid = QGridLayout()
-        grid.setSpacing(16)
+        self.grid = QGridLayout()
+        self.grid.setSpacing(14)
 
         # 1. NEW GAME
         self.new_game_card = self._create_card(
@@ -118,37 +205,68 @@ class HomeScreen(QWidget):
             on_click=self.new_game_clicked.emit,
             is_primary=True,
         )
-        grid.addWidget(self.new_game_card, 0, 0)
 
         # 2. CONTINUE GAME
         self.continue_game_card, self.save_status_badge, self.continue_btn = (
             self._create_continue_card()
         )
-        grid.addWidget(self.continue_game_card, 0, 1)
 
         # 3. LEARN CHESS (with CM)
         self.learn_card, self.learn_badge = self._create_learn_card()
-        grid.addWidget(self.learn_card, 1, 0)
 
         # 4. MATCH HISTORY & RATING
         self.history_card, self.history_badge = self._create_history_card()
-        grid.addWidget(self.history_card, 1, 1)
 
-        center_layout.addLayout(grid)
+        self._apply_grid_layout(is_mobile=False)
+        center_layout.addLayout(self.grid)
 
         # FOOTER INFO
         footer_lbl = QLabel(
             "AI Companion CM • 3 Active Save Slots • Offline Match Analysis & Elo Rating"
         )
         footer_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        footer_lbl.setStyleSheet("font-size: 11px; color: #94A3B8; font-weight: 500;")
+        footer_lbl.setWordWrap(True)
+        footer_lbl.setStyleSheet("font-size: 11px; color: #94A3B8; font-weight: 500; margin-top: 6px;")
         center_layout.addWidget(footer_lbl)
 
-        main_layout.addWidget(center_container, 0, Qt.AlignmentFlag.AlignCenter)
-        main_layout.addStretch(2)
+        main_layout.addWidget(self.center_container, 0, Qt.AlignmentFlag.AlignCenter)
+        main_layout.addStretch(1)
+
+        self.scroll_area.setWidget(self.scroll_content)
+        root_layout.addWidget(self.scroll_area)
 
         self.update_save_status()
         self.update_profile_ui()
+
+    # -------------------------------------------------------------
+    # Responsive Grid Layout for Mobile & Desktop
+    # -------------------------------------------------------------
+    def _apply_grid_layout(self, is_mobile: bool) -> None:
+        """Dynamically re-layout 4 cards into 1 column (mobile) or 2x2 (desktop)."""
+        # Remove items from grid
+        while self.grid.count():
+            self.grid.takeAt(0)
+
+        if is_mobile:
+            self.grid.addWidget(self.new_game_card, 0, 0)
+            self.grid.addWidget(self.continue_game_card, 1, 0)
+            self.grid.addWidget(self.learn_card, 2, 0)
+            self.grid.addWidget(self.history_card, 3, 0)
+        else:
+            self.grid.addWidget(self.new_game_card, 0, 0)
+            self.grid.addWidget(self.continue_game_card, 0, 1)
+            self.grid.addWidget(self.learn_card, 1, 0)
+            self.grid.addWidget(self.history_card, 1, 1)
+
+        self._is_mobile_grid = is_mobile
+        self._grid_columns = 1 if is_mobile else 2
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        w = self.width()
+        should_be_mobile = (w < 640)
+        if should_be_mobile != self._is_mobile_grid:
+            self._apply_grid_layout(is_mobile=should_be_mobile)
 
     # -------------------------------------------------------------
     # Profile & CM Header Card
@@ -159,46 +277,47 @@ class HomeScreen(QWidget):
             """
             QFrame {
                 background-color: #FFFFFF;
-                border: 1.5px solid #E2E8F0;
+                border: 1.5px solid #CBD5E1;
                 border-radius: 14px;
             }
             """
         )
         layout = QHBoxLayout(card)
-        layout.setContentsMargins(18, 10, 18, 10)
+        layout.setContentsMargins(16, 12, 16, 12)
         layout.setSpacing(14)
 
         # User avatar & name
         user_avatar = QLabel("👤")
-        user_avatar.setStyleSheet("font-size: 20px;")
+        user_avatar.setStyleSheet("font-size: 22px;")
         layout.addWidget(user_avatar)
 
         user_info = QVBoxLayout()
         user_info.setSpacing(2)
         self.username_label = QLabel()
-        self.username_label.setStyleSheet("font-size: 13px; font-weight: 800; color: #0F172A;")
+        self.username_label.setStyleSheet("font-size: 14px; font-weight: 800; color: #0F172A;")
         user_info.addWidget(self.username_label)
 
         sub_user = QLabel("Player Profile")
-        sub_user.setStyleSheet("font-size: 11px; color: #64748B;")
+        sub_user.setStyleSheet("font-size: 11px; color: #64748B; font-weight: 600;")
         user_info.addWidget(sub_user)
         layout.addLayout(user_info)
 
-        # Edit username button
+        # Edit username button (Touch-friendly 38px height)
         self.edit_user_btn = QPushButton("✏️ Edit Name")
         self.edit_user_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.edit_user_btn.setMinimumHeight(38)
         self.edit_user_btn.setStyleSheet(
             """
             QPushButton {
                 background-color: #F8FAFC;
-                color: #334155;
-                border: 1px solid #CBD5E1;
-                border-radius: 6px;
-                padding: 4px 10px;
-                font-size: 11px;
-                font-weight: 600;
+                color: #0F172A;
+                border: 1.5px solid #CBD5E1;
+                border-radius: 8px;
+                padding: 6px 14px;
+                font-size: 12px;
+                font-weight: 700;
             }
-            QPushButton:hover { background-color: #EFF6FF; border-color: #93C5FD; color: #1D4ED8; }
+            QPushButton:hover { background-color: #EFF6FF; border-color: #3B82F6; color: #1D4ED8; }
             """
         )
         self.edit_user_btn.clicked.connect(self._prompt_edit_username)
@@ -222,16 +341,13 @@ class HomeScreen(QWidget):
 
     def _prompt_edit_username(self) -> None:
         current_name = self.profile_manager.get_username()
-        new_name, ok = QInputDialog.getText(
-            self,
-            "Change Username",
-            "Enter your player username:",
-            text=current_name,
-        )
-        if ok and new_name.strip():
-            clean = self.profile_manager.set_username(new_name)
-            self.update_profile_ui()
-            self.username_changed.emit(clean)
+        dlg = EditUsernameDialog(current_name, parent=self)
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            new_name = dlg.get_username()
+            if new_name:
+                clean = self.profile_manager.set_username(new_name)
+                self.update_profile_ui()
+                self.username_changed.emit(clean)
 
     def update_profile_ui(self) -> None:
         """Update username label and CM's personalized greeting."""
@@ -271,7 +387,7 @@ class HomeScreen(QWidget):
             """
             QFrame#homeCard {
                 background-color: #FFFFFF;
-                border: 1.5px solid #E2E8F0;
+                border: 1.5px solid #CBD5E1;
                 border-radius: 14px;
             }
             QFrame#homeCard:hover {
@@ -280,7 +396,7 @@ class HomeScreen(QWidget):
             """
         )
         layout = QVBoxLayout(card)
-        layout.setContentsMargins(20, 18, 20, 18)
+        layout.setContentsMargins(18, 16, 18, 16)
         layout.setSpacing(10)
 
         fg, bg, border = badge_color
@@ -301,7 +417,7 @@ class HomeScreen(QWidget):
 
         card_desc = QLabel(desc_text)
         card_desc.setWordWrap(True)
-        card_desc.setStyleSheet("font-size: 12px; color: #64748B; line-height: 1.4;")
+        card_desc.setStyleSheet("font-size: 12px; color: #475569; line-height: 1.4; font-weight: 500;")
         layout.addWidget(card_desc)
 
         layout.addStretch(1)
@@ -309,39 +425,11 @@ class HomeScreen(QWidget):
         btn = QPushButton(btn_text)
         btn.setObjectName(btn_id)
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn.setMinimumHeight(40)
+        btn.setMinimumHeight(44)
         if is_primary:
-            btn.setStyleSheet(
-                """
-                QPushButton {
-                    background-color: #2563EB;
-                    color: #FFFFFF;
-                    border: none;
-                    border-radius: 9px;
-                    padding: 8px 16px;
-                    font-size: 13px;
-                    font-weight: 700;
-                }
-                QPushButton:hover { background-color: #1D4ED8; }
-                QPushButton:pressed { background-color: #1E40AF; }
-                """
-            )
+            btn.setStyleSheet(PRIMARY_BTN)
         else:
-            btn.setStyleSheet(
-                """
-                QPushButton {
-                    background-color: #FFFFFF;
-                    color: #1E293B;
-                    border: 1.5px solid #CBD5E1;
-                    border-radius: 9px;
-                    padding: 8px 16px;
-                    font-size: 13px;
-                    font-weight: 700;
-                }
-                QPushButton:hover { background-color: #F8FAFC; border-color: #94A3B8; }
-                QPushButton:pressed { background-color: #F1F5F9; }
-                """
-            )
+            btn.setStyleSheet(SECONDARY_BTN)
         btn.clicked.connect(on_click)
         layout.addWidget(btn)
 
@@ -354,7 +442,7 @@ class HomeScreen(QWidget):
             """
             QFrame#homeCard {
                 background-color: #FFFFFF;
-                border: 1.5px solid #E2E8F0;
+                border: 1.5px solid #CBD5E1;
                 border-radius: 14px;
             }
             QFrame#homeCard:hover {
@@ -363,7 +451,7 @@ class HomeScreen(QWidget):
             """
         )
         layout = QVBoxLayout(card)
-        layout.setContentsMargins(20, 18, 20, 18)
+        layout.setContentsMargins(18, 16, 18, 16)
         layout.setSpacing(10)
 
         top_row = QHBoxLayout()
@@ -384,7 +472,7 @@ class HomeScreen(QWidget):
 
         card_desc = QLabel("Resume a saved match where you left off from one of your active slots.")
         card_desc.setWordWrap(True)
-        card_desc.setStyleSheet("font-size: 12px; color: #64748B; line-height: 1.4;")
+        card_desc.setStyleSheet("font-size: 12px; color: #475569; line-height: 1.4; font-weight: 500;")
         layout.addWidget(card_desc)
 
         layout.addStretch(1)
@@ -392,22 +480,8 @@ class HomeScreen(QWidget):
         btn = QPushButton("Continue Game →")
         btn.setObjectName("homeContinueGameBtn")
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn.setMinimumHeight(40)
-        btn.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #FFFFFF;
-                color: #1E293B;
-                border: 1.5px solid #CBD5E1;
-                border-radius: 9px;
-                padding: 8px 16px;
-                font-size: 13px;
-                font-weight: 700;
-            }
-            QPushButton:hover { background-color: #F8FAFC; border-color: #94A3B8; }
-            QPushButton:pressed { background-color: #F1F5F9; }
-            """
-        )
+        btn.setMinimumHeight(44)
+        btn.setStyleSheet(SECONDARY_BTN)
         btn.clicked.connect(self.continue_game_clicked.emit)
         layout.addWidget(btn)
 
@@ -420,7 +494,7 @@ class HomeScreen(QWidget):
             """
             QFrame#homeCard {
                 background-color: #FFFFFF;
-                border: 1.5px solid #E2E8F0;
+                border: 1.5px solid #CBD5E1;
                 border-radius: 14px;
             }
             QFrame#homeCard:hover {
@@ -429,7 +503,7 @@ class HomeScreen(QWidget):
             """
         )
         layout = QVBoxLayout(card)
-        layout.setContentsMargins(20, 18, 20, 18)
+        layout.setContentsMargins(18, 16, 18, 16)
         layout.setSpacing(10)
 
         top_row = QHBoxLayout()
@@ -449,7 +523,7 @@ class HomeScreen(QWidget):
 
         card_desc = QLabel("Interactive lessons guided by your AI buddy CM, from piece movements to pro tactics.")
         card_desc.setWordWrap(True)
-        card_desc.setStyleSheet("font-size: 12px; color: #64748B; line-height: 1.4;")
+        card_desc.setStyleSheet("font-size: 12px; color: #475569; line-height: 1.4; font-weight: 500;")
         layout.addWidget(card_desc)
 
         layout.addStretch(1)
@@ -457,17 +531,18 @@ class HomeScreen(QWidget):
         btn = QPushButton("Start Learning →")
         btn.setObjectName("homeLearnBtn")
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn.setMinimumHeight(40)
+        btn.setMinimumHeight(44)
         btn.setStyleSheet(
             """
             QPushButton {
                 background-color: #10B981;
                 color: #FFFFFF;
                 border: none;
-                border-radius: 9px;
-                padding: 8px 16px;
-                font-size: 13px;
+                border-radius: 10px;
+                padding: 10px 18px;
+                font-size: 14px;
                 font-weight: 700;
+                min-height: 44px;
             }
             QPushButton:hover { background-color: #059669; }
             QPushButton:pressed { background-color: #047857; }
@@ -485,7 +560,7 @@ class HomeScreen(QWidget):
             """
             QFrame#homeCard {
                 background-color: #FFFFFF;
-                border: 1.5px solid #E2E8F0;
+                border: 1.5px solid #CBD5E1;
                 border-radius: 14px;
             }
             QFrame#homeCard:hover {
@@ -494,7 +569,7 @@ class HomeScreen(QWidget):
             """
         )
         layout = QVBoxLayout(card)
-        layout.setContentsMargins(20, 18, 20, 18)
+        layout.setContentsMargins(18, 16, 18, 16)
         layout.setSpacing(10)
 
         top_row = QHBoxLayout()
@@ -514,7 +589,7 @@ class HomeScreen(QWidget):
 
         card_desc = QLabel("Explore past match logs across months, analyze win rates, and monitor Elo rating growth.")
         card_desc.setWordWrap(True)
-        card_desc.setStyleSheet("font-size: 12px; color: #64748B; line-height: 1.4;")
+        card_desc.setStyleSheet("font-size: 12px; color: #475569; line-height: 1.4; font-weight: 500;")
         layout.addWidget(card_desc)
 
         layout.addStretch(1)
@@ -522,22 +597,8 @@ class HomeScreen(QWidget):
         btn = QPushButton("View History →")
         btn.setObjectName("homeHistoryBtn")
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn.setMinimumHeight(40)
-        btn.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #FFFFFF;
-                color: #1E293B;
-                border: 1.5px solid #CBD5E1;
-                border-radius: 9px;
-                padding: 8px 16px;
-                font-size: 13px;
-                font-weight: 700;
-            }
-            QPushButton:hover { background-color: #F8FAFC; border-color: #94A3B8; }
-            QPushButton:pressed { background-color: #F1F5F9; }
-            """
-        )
+        btn.setMinimumHeight(44)
+        btn.setStyleSheet(SECONDARY_BTN)
         btn.clicked.connect(self.history_clicked.emit)
         layout.addWidget(btn)
 

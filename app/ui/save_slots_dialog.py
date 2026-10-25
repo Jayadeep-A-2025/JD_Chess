@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.services.save_manager import SaveManager, SaveSlot
+from app.ui.styles import SECONDARY_BTN
 
 
 class SaveSlotsDialog(QDialog):
@@ -40,11 +41,11 @@ class SaveSlotsDialog(QDialog):
         title_text = "Continue Game - Saved Matches" if mode == self.MODE_CONTINUE else "Save Game - Select Slot"
         self.setWindowTitle(title_text)
         self.resize(520, 560)
-        self.setMinimumSize(460, 480)
+        self.setMinimumSize(320, 460)
         self.setStyleSheet("QDialog { background-color: #F8FAFC; }")
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(16)
 
         # Header section
@@ -64,7 +65,7 @@ class SaveSlotsDialog(QDialog):
 
         dialog_subtitle = QLabel(sub_text)
         dialog_subtitle.setWordWrap(True)
-        dialog_subtitle.setStyleSheet("font-size: 13px; color: #64748B;")
+        dialog_subtitle.setStyleSheet("font-size: 13px; color: #475569; font-weight: 500;")
         header_layout.addWidget(dialog_subtitle)
 
         layout.addLayout(header_layout)
@@ -90,20 +91,8 @@ class SaveSlotsDialog(QDialog):
 
         self.close_button = QPushButton("Cancel" if mode == self.MODE_CONTINUE else "Close")
         self.close_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.close_button.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #FFFFFF;
-                color: #475569;
-                border: 1px solid #CBD5E1;
-                border-radius: 8px;
-                padding: 8px 20px;
-                font-size: 13px;
-                font-weight: 600;
-            }
-            QPushButton:hover { background-color: #F1F5F9; border-color: #94A3B8; }
-            """
-        )
+        self.close_button.setMinimumHeight(44)
+        self.close_button.setStyleSheet(SECONDARY_BTN)
         self.close_button.clicked.connect(self.reject)
         footer_layout.addWidget(self.close_button)
 
@@ -113,7 +102,6 @@ class SaveSlotsDialog(QDialog):
 
     def refresh_slots(self) -> None:
         """Clear and rebuild the 3 slot cards."""
-        # Clear previous widgets
         while self.cards_layout.count():
             item = self.cards_layout.takeAt(0)
             widget = item.widget()
@@ -137,11 +125,11 @@ class SaveSlotsDialog(QDialog):
                 """
                 QFrame {
                     background-color: #FFFFFF;
-                    border: 1.5px solid #E2E8F0;
+                    border: 1.5px solid #CBD5E1;
                     border-radius: 12px;
                 }
                 QFrame:hover {
-                    border-color: #93C5FD;
+                    border-color: #2563EB;
                 }
                 """
             )
@@ -157,73 +145,76 @@ class SaveSlotsDialog(QDialog):
             )
 
         card_layout = QVBoxLayout(card)
-        card_layout.setContentsMargins(16, 14, 16, 14)
-        card_layout.setSpacing(10)
+        card_layout.setContentsMargins(18, 16, 18, 16)
+        card_layout.setSpacing(12)
 
-        # Top row: Slot badge and saved time
-        top_row = QHBoxLayout()
-        slot_badge = QLabel(f"SLOT {slot.slot_id}")
-        slot_badge.setStyleSheet(
-            "font-size: 11px; font-weight: 800; color: #2563EB; "
-            "background-color: #EFF6FF; border: 1px solid #BFDBFE; "
-            "border-radius: 6px; padding: 2px 8px;"
-        )
-        top_row.addWidget(slot_badge)
+        # Header row: Slot Name + Status badge
+        header_row = QHBoxLayout()
+        slot_title = QLabel(f"Slot {slot.slot_id}")
+        slot_title.setStyleSheet("font-size: 16px; font-weight: 800; color: #0F172A;")
+        header_row.addWidget(slot_title)
+        header_row.addStretch(1)
 
         if slot.is_active:
-            date_lbl = QLabel(slot.saved_at_formatted)
-            date_lbl.setStyleSheet("font-size: 12px; color: #64748B; font-weight: 500;")
-            top_row.addWidget(date_lbl, 0, Qt.AlignmentFlag.AlignRight)
+            status_chip = QLabel("Active Save")
+            status_chip.setStyleSheet(
+                "font-size: 11px; font-weight: 700; color: #047857; "
+                "background-color: #D1FAE5; border: 1px solid #A7F3D0; "
+                "border-radius: 6px; padding: 2px 8px;"
+            )
         else:
-            empty_lbl = QLabel("Empty Slot")
-            empty_lbl.setStyleSheet("font-size: 12px; color: #94A3B8; font-style: italic;")
-            top_row.addWidget(empty_lbl, 0, Qt.AlignmentFlag.AlignRight)
-
-        card_layout.addLayout(top_row)
+            status_chip = QLabel("Empty Slot")
+            status_chip.setStyleSheet(
+                "font-size: 11px; font-weight: 600; color: #64748B; "
+                "background-color: #E2E8F0; border-radius: 6px; padding: 2px 8px;"
+            )
+        header_row.addWidget(status_chip)
+        card_layout.addLayout(header_row)
 
         if slot.is_active:
-            # Details section
             details_layout = QVBoxLayout()
             details_layout.setSpacing(4)
 
-            # Match mode with difficulty if computer
+            mode_text = slot.game_mode
             if slot.game_mode == "Play vs Computer":
-                mode_desc = f"⚔️ Play vs Computer ({slot.difficulty})"
-            else:
-                mode_desc = "👥 Local 2-Player Match"
+                mode_text = f"Play vs Computer ({slot.difficulty})"
 
-            mode_lbl = QLabel(mode_desc)
-            mode_lbl.setStyleSheet("font-size: 14px; font-weight: 700; color: #0F172A;")
+            mode_lbl = QLabel(f"Mode: <b>{mode_text}</b>")
+            mode_lbl.setStyleSheet("font-size: 13px; color: #1E293B;")
             details_layout.addWidget(mode_lbl)
 
-            # Perspective and Move count
+            date_lbl = QLabel(f"Saved: {slot.saved_at_formatted or 'Unknown date'}")
+            date_lbl.setStyleSheet("font-size: 12px; color: #64748B;")
+            details_layout.addWidget(date_lbl)
+
             perspective_text = f"Playing as: <b>{slot.player_color}</b>"
             turn_text = f"Turn: <b>{slot.turn}</b>"
             moves_text = f"<b>{slot.move_count}</b> moves played"
 
             meta_lbl = QLabel(f"{perspective_text}  •  {turn_text}  •  {moves_text}")
-            meta_lbl.setStyleSheet("font-size: 12px; color: #475569;")
+            meta_lbl.setStyleSheet("font-size: 12px; color: #334155;")
             details_layout.addWidget(meta_lbl)
 
             card_layout.addLayout(details_layout)
 
-            # Action buttons row
+            # Action buttons row (Touch-friendly 40px+ height)
             btn_row = QHBoxLayout()
-            btn_row.setSpacing(8)
+            btn_row.setSpacing(10)
 
             if self.mode == self.MODE_CONTINUE:
                 continue_btn = QPushButton("Continue Match →")
                 continue_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+                continue_btn.setMinimumHeight(40)
                 continue_btn.setStyleSheet(
                     """
                     QPushButton {
                         background-color: #2563EB;
                         color: #FFFFFF;
                         border: none;
-                        border-radius: 6px;
-                        padding: 7px 16px;
-                        font-size: 12px;
-                        font-weight: 600;
+                        border-radius: 8px;
+                        padding: 8px 18px;
+                        font-size: 13px;
+                        font-weight: 700;
                     }
                     QPushButton:hover { background-color: #1D4ED8; }
                     """
@@ -233,16 +224,17 @@ class SaveSlotsDialog(QDialog):
 
                 delete_btn = QPushButton("Delete")
                 delete_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+                delete_btn.setMinimumHeight(40)
                 delete_btn.setStyleSheet(
                     """
                     QPushButton {
-                        background-color: transparent;
+                        background-color: #FEF2F2;
                         color: #DC2626;
-                        border: 1px solid #FECACA;
-                        border-radius: 6px;
-                        padding: 7px 12px;
-                        font-size: 12px;
-                        font-weight: 600;
+                        border: 1.5px solid #FECACA;
+                        border-radius: 8px;
+                        padding: 8px 14px;
+                        font-size: 13px;
+                        font-weight: 700;
                     }
                     QPushButton:hover { background-color: #FEE2E2; }
                     """
@@ -253,16 +245,17 @@ class SaveSlotsDialog(QDialog):
             else:  # MODE_SAVE
                 overwrite_btn = QPushButton(f"Overwrite Slot {slot.slot_id}")
                 overwrite_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+                overwrite_btn.setMinimumHeight(40)
                 overwrite_btn.setStyleSheet(
                     """
                     QPushButton {
                         background-color: #D97706;
                         color: #FFFFFF;
                         border: none;
-                        border-radius: 6px;
-                        padding: 7px 16px;
-                        font-size: 12px;
-                        font-weight: 600;
+                        border-radius: 8px;
+                        padding: 8px 18px;
+                        font-size: 13px;
+                        font-weight: 700;
                     }
                     QPushButton:hover { background-color: #B45309; }
                     """
@@ -275,22 +268,23 @@ class SaveSlotsDialog(QDialog):
 
         else:  # Slot is empty
             empty_desc = QLabel("No game saved in this slot yet.")
-            empty_desc.setStyleSheet("font-size: 12px; color: #94A3B8;")
+            empty_desc.setStyleSheet("font-size: 13px; color: #64748B;")
             card_layout.addWidget(empty_desc)
 
             if self.mode == self.MODE_SAVE:
                 save_btn = QPushButton(f"Save to Slot {slot.slot_id} →")
                 save_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+                save_btn.setMinimumHeight(40)
                 save_btn.setStyleSheet(
                     """
                     QPushButton {
                         background-color: #10B981;
                         color: #FFFFFF;
                         border: none;
-                        border-radius: 6px;
-                        padding: 7px 16px;
-                        font-size: 12px;
-                        font-weight: 600;
+                        border-radius: 8px;
+                        padding: 8px 18px;
+                        font-size: 13px;
+                        font-weight: 700;
                     }
                     QPushButton:hover { background-color: #059669; }
                     """
@@ -309,24 +303,34 @@ class SaveSlotsDialog(QDialog):
         self.accept()
 
     def _on_overwrite_slot(self, slot_id: int) -> None:
-        reply = QMessageBox.question(
-            self,
-            "Confirm Overwrite",
-            f"Are you sure you want to overwrite Slot {slot_id} with your current game?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
+        msg_box = QMessageBox(self)
+        msg_box.setWindowTitle("Confirm Overwrite")
+        msg_box.setText(f"Are you sure you want to overwrite Slot {slot_id} with your current game?")
+        yes_btn = msg_box.addButton("Yes, Overwrite", QMessageBox.ButtonRole.YesRole)
+        no_btn = msg_box.addButton("Cancel", QMessageBox.ButtonRole.NoRole)
+        yes_btn.setStyleSheet(
+            "background-color: #D97706; color: #FFFFFF; font-weight: 700; min-height: 40px; padding: 6px 18px; border-radius: 8px;"
         )
-        if reply == QMessageBox.StandardButton.Yes:
+        no_btn.setStyleSheet(
+            "background-color: #FFFFFF; color: #1E293B; border: 1.5px solid #CBD5E1; font-weight: 700; min-height: 40px; padding: 6px 18px; border-radius: 8px;"
+        )
+        msg_box.exec()
+        if msg_box.clickedButton() == yes_btn:
             self._on_save_slot(slot_id)
 
     def _on_delete_slot(self, slot_id: int) -> None:
-        reply = QMessageBox.question(
-            self,
-            "Delete Save Slot",
-            f"Are you sure you want to delete Slot {slot_id}? This cannot be undone.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
+        msg_box = QMessageBox(self)
+        msg_box.setWindowTitle("Delete Save Slot")
+        msg_box.setText(f"Are you sure you want to delete Slot {slot_id}? This cannot be undone.")
+        del_btn = msg_box.addButton("Yes, Delete", QMessageBox.ButtonRole.YesRole)
+        cancel_btn = msg_box.addButton("Cancel", QMessageBox.ButtonRole.NoRole)
+        del_btn.setStyleSheet(
+            "background-color: #DC2626; color: #FFFFFF; font-weight: 700; min-height: 40px; padding: 6px 18px; border-radius: 8px;"
         )
-        if reply == QMessageBox.StandardButton.Yes:
+        cancel_btn.setStyleSheet(
+            "background-color: #FFFFFF; color: #1E293B; border: 1.5px solid #CBD5E1; font-weight: 700; min-height: 40px; padding: 6px 18px; border-radius: 8px;"
+        )
+        msg_box.exec()
+        if msg_box.clickedButton() == del_btn:
             self.save_manager.delete_slot(slot_id)
             self.refresh_slots()

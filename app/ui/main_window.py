@@ -32,6 +32,7 @@ from app.ui.home_screen import HomeScreen
 from app.ui.learn_screen import LearnScreen
 from app.ui.save_slots_dialog import SaveSlotsDialog
 from app.ui.setup_screen import SetupScreen
+from app.ui.styles import app_global_theme
 
 
 class ComputerWorker(QThread):
@@ -78,7 +79,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("JD Chess")
         self.resize(1060, 750)
-        self.setMinimumSize(640, 480)
+        self.setMinimumSize(320, 480)
+        self.setStyleSheet(app_global_theme())
 
         self.game = ChessGame()
         self.engine = None

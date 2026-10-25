@@ -13,6 +13,9 @@ def main() -> int:
     app = QApplication(sys.argv)
     app.setApplicationName("JD Chess")
 
+    from app.ui.styles import app_global_theme
+    app.setStyleSheet(app_global_theme())
+
     window = MainWindow()
     window.show()
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Window: Learn Chess Module featuring AI companion 'CM' (Chess Mate)."""
+"""Window: Learn Chess Module featuring AI companion 'CM' (Chess Mate) with responsive mobile layout."""
 
 import chess
 from PySide6.QtCore import Qt, Signal
@@ -27,7 +27,7 @@ from app.services.curriculum import (
 )
 from app.services.user_profile_manager import UserProfileManager
 from app.ui.chessboard_widget import ChessBoardWidget
-from app.ui.styles import PRIMARY_BTN, SECONDARY_BTN, SUCCESS_BTN
+from app.ui.styles import PRIMARY_BTN, SECONDARY_BTN
 
 
 class LearnScreen(QWidget):
@@ -48,31 +48,46 @@ class LearnScreen(QWidget):
         self.game = ChessGame()
         self.current_lesson: Lesson = self._initial_lesson()
         self.is_lesson_solved: bool = False
+        self._is_narrow_layout = False
 
         self.setStyleSheet("QWidget { background-color: #F8FAFC; }")
 
         root = QVBoxLayout(self)
-        root.setContentsMargins(20, 16, 20, 16)
-        root.setSpacing(14)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+
+        # Main scrollable area for mobile responsiveness
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+        self.scroll_area.setStyleSheet("QScrollArea { background: transparent; border: none; }")
+        self.scroll_area.viewport().setStyleSheet("background: transparent;")
+
+        self.scroll_content = QWidget()
+        self.scroll_content.setStyleSheet("background: transparent;")
+        main_vbox = QVBoxLayout(self.scroll_content)
+        main_vbox.setContentsMargins(14, 14, 14, 16)
+        main_vbox.setSpacing(12)
 
         # -------------------------------------------------------------
         # 1. TOP BAR
         # -------------------------------------------------------------
         top_bar = QHBoxLayout()
-        top_bar.setSpacing(12)
+        top_bar.setSpacing(10)
 
         self.back_button = QPushButton("← Main Menu")
         self.back_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.back_button.setMinimumHeight(40)
         self.back_button.setStyleSheet(
             """
             QPushButton {
                 background-color: transparent;
-                color: #475569;
-                border: 1px solid #CBD5E1;
+                color: #334155;
+                border: 1.5px solid #CBD5E1;
                 border-radius: 8px;
                 padding: 6px 14px;
                 font-size: 13px;
-                font-weight: 600;
+                font-weight: 700;
             }
             QPushButton:hover { background-color: #F1F5F9; color: #0F172A; }
             """
@@ -82,15 +97,15 @@ class LearnScreen(QWidget):
 
         title_lbl = QLabel("Learn Chess with CM")
         title_lbl.setStyleSheet(
-            "font-size: 17px; font-weight: 800; color: #0F172A; letter-spacing: 0.3px;"
+            "font-size: 16px; font-weight: 800; color: #0F172A; letter-spacing: 0.3px;"
         )
         top_bar.addWidget(title_lbl)
 
-        self.cm_status_pill = QLabel("🤖 CM: Online & Ready")
+        self.cm_status_pill = QLabel("🤖 CM: Online")
         self.cm_status_pill.setStyleSheet(
             "font-size: 12px; font-weight: 700; color: #1D4ED8; "
             "background-color: #EFF6FF; border: 1px solid #BFDBFE; "
-            "border-radius: 12px; padding: 4px 14px;"
+            "border-radius: 12px; padding: 4px 12px;"
         )
         top_bar.addWidget(self.cm_status_pill)
 
@@ -100,25 +115,30 @@ class LearnScreen(QWidget):
         self.progress_pill.setStyleSheet(
             "font-size: 12px; font-weight: 700; color: #065F46; "
             "background-color: #D1FAE5; border: 1px solid #A7F3D0; "
-            "border-radius: 12px; padding: 4px 14px;"
+            "border-radius: 12px; padding: 4px 12px;"
         )
         top_bar.addWidget(self.progress_pill)
 
-        root.addLayout(top_bar)
+        main_vbox.addLayout(top_bar)
 
         # -------------------------------------------------------------
         # 2. MAIN SPLIT LAYOUT (Left: Board + CM, Right: Curriculum Sidebar)
         # -------------------------------------------------------------
-        content_row = QHBoxLayout()
-        content_row.setSpacing(20)
+        self.content_container = QWidget()
+        self.content_container.setStyleSheet("background: transparent;")
+        self.content_layout = QHBoxLayout(self.content_container)
+        self.content_layout.setContentsMargins(0, 4, 0, 4)
+        self.content_layout.setSpacing(16)
 
         # --- LEFT COLUMN: CM Dialogue & Board ---
-        left_col = QVBoxLayout()
-        left_col.setSpacing(12)
+        self.left_col = QWidget()
+        self.left_col_layout = QVBoxLayout(self.left_col)
+        self.left_col_layout.setContentsMargins(0, 0, 0, 0)
+        self.left_col_layout.setSpacing(10)
 
         # CM Companion Speech Card
         self.cm_card = self._build_cm_speech_card()
-        left_col.addWidget(self.cm_card)
+        self.left_col_layout.addWidget(self.cm_card)
 
         # Interactive Board Container
         self.board_container = QWidget()
@@ -129,22 +149,25 @@ class LearnScreen(QWidget):
         board_box.setContentsMargins(0, 0, 0, 0)
 
         self.board_widget = ChessBoardWidget(game=self.game, parent=self)
+        self.board_widget.setMinimumSize(280, 280)
         self.board_widget.move_made.connect(self._on_user_board_move)
         board_box.addWidget(self.board_widget)
-        left_col.addWidget(self.board_container, 1)
+        self.left_col_layout.addWidget(self.board_container, 1)
 
         # Action bar under board (Hint, Reset, Prev, Next)
         actions_bar = QHBoxLayout()
-        actions_bar.setSpacing(10)
+        actions_bar.setSpacing(8)
 
         self.hint_btn = QPushButton("💡 Ask CM for Hint")
         self.hint_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.hint_btn.setMinimumHeight(44)
         self.hint_btn.setStyleSheet(SECONDARY_BTN)
         self.hint_btn.clicked.connect(self._show_hint)
         actions_bar.addWidget(self.hint_btn)
 
         self.reset_btn = QPushButton("↺ Reset Board")
         self.reset_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.reset_btn.setMinimumHeight(44)
         self.reset_btn.setStyleSheet(SECONDARY_BTN)
         self.reset_btn.clicked.connect(self._reset_current_lesson)
         actions_bar.addWidget(self.reset_btn)
@@ -153,48 +176,86 @@ class LearnScreen(QWidget):
 
         self.prev_btn = QPushButton("← Prev Lesson")
         self.prev_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.prev_btn.setMinimumHeight(44)
         self.prev_btn.setStyleSheet(SECONDARY_BTN)
         self.prev_btn.clicked.connect(self._go_prev_lesson)
         actions_bar.addWidget(self.prev_btn)
 
         self.next_btn = QPushButton("Next Lesson →")
         self.next_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.next_btn.setMinimumHeight(44)
         self.next_btn.setStyleSheet(PRIMARY_BTN)
         self.next_btn.clicked.connect(self._go_next_lesson)
         actions_bar.addWidget(self.next_btn)
 
-        left_col.addLayout(actions_bar)
+        self.left_col_layout.addLayout(actions_bar)
 
         # Grandmaster Educational Theory Note
         self.note_card = QFrame()
         self.note_card.setStyleSheet(
-            "QFrame { background-color: #FFFFFF; border: 1.5px solid #E2E8F0; border-radius: 12px; }"
+            "QFrame { background-color: #FFFFFF; border: 1.5px solid #CBD5E1; border-radius: 12px; }"
         )
         note_layout = QVBoxLayout(self.note_card)
         note_layout.setContentsMargins(16, 12, 16, 12)
         note_layout.setSpacing(4)
 
         self.note_header = QLabel("📖 Grandmaster Insight")
-        self.note_header.setStyleSheet("font-size: 12px; font-weight: 800; color: #1E293B;")
+        self.note_header.setStyleSheet("font-size: 13px; font-weight: 800; color: #1E293B;")
         note_layout.addWidget(self.note_header)
 
         self.note_text = QLabel()
         self.note_text.setWordWrap(True)
-        self.note_text.setStyleSheet("font-size: 12px; color: #475569; line-height: 1.4;")
+        self.note_text.setStyleSheet("font-size: 12px; color: #334155; line-height: 1.4; font-weight: 500;")
         note_layout.addWidget(self.note_text)
 
-        left_col.addWidget(self.note_card)
-
-        content_row.addLayout(left_col, 3)
+        self.left_col_layout.addWidget(self.note_card)
 
         # --- RIGHT COLUMN: Curriculum Navigation Sidebar ---
-        right_sidebar = self._build_curriculum_sidebar()
-        content_row.addWidget(right_sidebar, 1)
+        self.right_sidebar = self._build_curriculum_sidebar()
 
-        root.addLayout(content_row, 1)
+        self._set_responsive_layout(is_narrow=False)
+
+        main_vbox.addWidget(self.content_container, 1)
+        self.scroll_area.setWidget(self.scroll_content)
+        root.addWidget(self.scroll_area)
 
         # Load initial lesson
         self.load_lesson(self.current_lesson)
+
+    # -------------------------------------------------------------
+    # Responsive Layout Switching (Desktop vs Mobile)
+    # -------------------------------------------------------------
+    def _set_responsive_layout(self, is_narrow: bool) -> None:
+        self.content_layout.removeWidget(self.left_col)
+        self.content_layout.removeWidget(self.right_sidebar)
+
+        if is_narrow:
+            QWidget().setLayout(self.content_layout)
+            self.content_layout = QVBoxLayout(self.content_container)
+            self.content_layout.setContentsMargins(0, 0, 0, 0)
+            self.content_layout.setSpacing(14)
+
+            self.right_sidebar.setMinimumWidth(0)
+            self.content_layout.addWidget(self.left_col)
+            self.content_layout.addWidget(self.right_sidebar)
+        else:
+            QWidget().setLayout(self.content_layout)
+            self.content_layout = QHBoxLayout(self.content_container)
+            self.content_layout.setContentsMargins(0, 0, 0, 0)
+            self.content_layout.setSpacing(18)
+
+            self.right_sidebar.setMinimumWidth(280)
+            self.content_layout.addWidget(self.left_col, 3)
+            self.content_layout.addWidget(self.right_sidebar, 1)
+
+        self._is_narrow_layout = is_narrow
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        w = self.width()
+        should_be_narrow = (w < 768)
+        if should_be_narrow != self._is_narrow_layout:
+            self._set_responsive_layout(should_be_narrow)
 
     # -------------------------------------------------------------
     # UI Component Builders
@@ -207,32 +268,32 @@ class LearnScreen(QWidget):
             QFrame#cmSpeechCard {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
                     stop:0 #0F172A, stop:1 #1E293B);
-                border: 1px solid #334155;
+                border: 1.5px solid #334155;
                 border-radius: 14px;
             }
             """
         )
         layout = QHBoxLayout(card)
-        layout.setContentsMargins(18, 14, 18, 14)
-        layout.setSpacing(16)
+        layout.setContentsMargins(16, 12, 16, 12)
+        layout.setSpacing(14)
 
         # Avatar
         avatar = QLabel("🤖")
         avatar.setFixedSize(48, 48)
         avatar.setAlignment(Qt.AlignmentFlag.AlignCenter)
         avatar.setStyleSheet(
-            "font-size: 28px; background-color: #2563EB; "
+            "font-size: 26px; background-color: #2563EB; "
             "border: 2px solid #60A5FA; border-radius: 24px;"
         )
         layout.addWidget(avatar, 0, Qt.AlignmentFlag.AlignTop)
 
         # Text column
         text_col = QVBoxLayout()
-        text_col.setSpacing(6)
+        text_col.setSpacing(4)
 
         top_row = QHBoxLayout()
-        self.cm_name_lbl = QLabel("CM (Chess Mate) • AI Coach")
-        self.cm_name_lbl.setStyleSheet("font-size: 12px; font-weight: 800; color: #60A5FA;")
+        self.cm_name_lbl = QLabel("CM (Chess Mate) • AI Companion")
+        self.cm_name_lbl.setStyleSheet("font-size: 13px; font-weight: 800; color: #60A5FA;")
         top_row.addWidget(self.cm_name_lbl)
 
         self.lesson_badge = QLabel("Lesson 1")
@@ -262,11 +323,11 @@ class LearnScreen(QWidget):
     def _build_curriculum_sidebar(self) -> QFrame:
         sidebar = QFrame()
         sidebar.setStyleSheet(
-            "QFrame { background-color: #FFFFFF; border: 1.5px solid #E2E8F0; border-radius: 14px; }"
+            "QFrame { background-color: #FFFFFF; border: 1.5px solid #CBD5E1; border-radius: 14px; }"
         )
         layout = QVBoxLayout(sidebar)
-        layout.setContentsMargins(16, 16, 16, 16)
-        layout.setSpacing(12)
+        layout.setContentsMargins(14, 14, 14, 14)
+        layout.setSpacing(10)
 
         # Header
         sb_title = QLabel("Course Curriculum")
@@ -321,6 +382,7 @@ class LearnScreen(QWidget):
             btn = QPushButton()
             btn.setObjectName(f"lesson_btn_{lesson.id}")
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn.setMinimumHeight(40)
             btn.clicked.connect(lambda _, lid=lesson.id: self.select_lesson_by_id(lid))
             self.lesson_buttons[lesson.id] = btn
             self.lesson_list_layout.addWidget(btn)
@@ -382,7 +444,6 @@ class LearnScreen(QWidget):
         """Called whenever the user makes a move on the board widget."""
         username = self.profile_manager.get_username()
 
-        # Check if the played move matches an expected solution
         if uci_move in self.current_lesson.expected_moves:
             self.is_lesson_solved = True
             self.profile_manager.mark_lesson_completed(self.current_lesson.id)
@@ -447,12 +508,13 @@ class LearnScreen(QWidget):
                     QPushButton {
                         background-color: #EFF6FF;
                         color: #1D4ED8;
-                        border: 1.5px solid #3B82F6;
+                        border: 2px solid #3B82F6;
                         border-radius: 8px;
-                        padding: 8px 10px;
+                        padding: 8px 12px;
                         font-size: 12px;
                         font-weight: 700;
                         text-align: left;
+                        min-height: 40px;
                     }
                     """
                 )
@@ -462,12 +524,13 @@ class LearnScreen(QWidget):
                     QPushButton {
                         background-color: #F0FDF4;
                         color: #15803D;
-                        border: 1px solid #BBF7D0;
+                        border: 1.5px solid #86EFAC;
                         border-radius: 8px;
-                        padding: 8px 10px;
+                        padding: 8px 12px;
                         font-size: 12px;
                         font-weight: 600;
                         text-align: left;
+                        min-height: 40px;
                     }
                     QPushButton:hover { background-color: #DCFCE7; }
                     """
@@ -477,14 +540,15 @@ class LearnScreen(QWidget):
                     """
                     QPushButton {
                         background-color: #FFFFFF;
-                        color: #475569;
-                        border: 1px solid #E2E8F0;
+                        color: #334155;
+                        border: 1.5px solid #CBD5E1;
                         border-radius: 8px;
-                        padding: 8px 10px;
+                        padding: 8px 12px;
                         font-size: 12px;
-                        font-weight: 500;
+                        font-weight: 600;
                         text-align: left;
+                        min-height: 40px;
                     }
-                    QPushButton:hover { background-color: #F8FAFC; border-color: #CBD5E1; }
+                    QPushButton:hover { background-color: #F8FAFC; border-color: #94A3B8; }
                     """
                 )

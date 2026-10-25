@@ -57,19 +57,19 @@ CURRICULUM: list[Lesson] = [
         category="Beginner Basics",
         title="2. The Knight's Jump (L-Shape)",
         concept="Knights move in an 'L' shape (two squares along one axis, then one square perpendicular) and can leap over any piece.",
-        fen="4k3/8/8/3p4/8/5N2/8/4K3 w - - 0 1",
+        fen="4k3/8/8/4p3/8/5N2/8/4K3 w - - 0 1",
         player_color="White",
-        objective="Use your Knight on f3 to capture the black pawn on d5 with an L-shaped leap!",
-        expected_moves=["f3d5"],
+        objective="Use your Knight on f3 to capture the black pawn on e5 with an L-shaped leap!",
+        expected_moves=["f3e5"],
         cm_intro=(
             "Look at that Knight, {username}! Unlike every other piece, the Knight can jump directly over barriers. "
-            "It moves in an L-shape: two squares up and one left, landing right on that d5 pawn. Strike!"
+            "It moves in an L-shape: two squares up and one left, landing right on that e5 pawn. Strike!"
         ),
         cm_success=(
-            "Outstanding leap, {username}! You landed on d5 and captured the pawn. "
+            "Outstanding leap, {username}! You landed on e5 and captured the pawn. "
             "Knights are especially ferocious in closed positions where other pieces get blocked."
         ),
-        cm_hint="Move your knight from f3: two squares left and one square up, landing on d5.",
+        cm_hint="Move your knight from f3: two squares up and one square left, landing on e5.",
         educational_note=(
             "Knights are the only pieces that can jump over other friendly or enemy pieces. "
             "A knight on the rim is dim, but a centralized knight controls up to 8 squares!"
@@ -103,42 +103,43 @@ CURRICULUM: list[Lesson] = [
         category="Beginner Basics",
         title="4. The Rook: Command of Ranks & Files",
         concept="Rooks travel horizontally along ranks and vertically along files.",
-        fen="4k3/8/8/8/1p6/8/1R6/4K3 w - - 0 1",
+        fen="4k3/8/8/4p3/8/8/1Q6/4K3 w - - 0 1",
         player_color="White",
-        objective="Charge up the b-file with your Rook on b2 and capture the pawn on b4!",
-        expected_moves=["b2b4"],
+        objective="Use your Queen on b2 to capture the pawn on e5 in a single diagonal stroke!",
+        expected_moves=["b2e5"],
         cm_intro=(
             "Time for the heavy artillery, {username}! Rooks control straight highways—ranks and files. "
-            "March your rook straight up the open b-file to capture the intruder on b4!"
+            "She can glide straight or diagonally across the entire board. Capture the pawn on e5!"
         ),
         cm_success=(
             "Boom! Power play, {username}! Rooks love open files where no friendly pawns block their path. "
             "Connecting your two rooks on an open file is a classic winning technique."
         ),
-        cm_hint="Slide the rook on b2 straight forward two squares to b4.",
+        cm_hint="Move your Queen from b2 diagonally up and to the right to land on e5.",
         educational_note=(
             "Rooks are worth 5 points—more than minor pieces (Knights and Bishops, worth 3 points each). "
             "Keep files open for your rooks to maximize their attacking scope."
         ),
     ),
+    
     Lesson(
         id="beginner_queen",
         category="Beginner Basics",
         title="5. The Queen's Dominion",
         concept="The Queen is the most versatile piece, combining the powers of both the Rook and the Bishop.",
-        fen="4k3/8/8/5p2/8/8/1Q6/4K3 w - - 0 1",
+        fen="4k3/8/8/4p3/8/8/1Q6/4K3 w - - 0 1",
         player_color="White",
-        objective="Use your Queen on b2 to capture the pawn on f5 in a single diagonal stroke!",
-        expected_moves=["b2f5"],
+        objective="Use your Queen on b2 to capture the pawn on e5 in a single diagonal stroke!",
+        expected_moves=["b2e5"],
         cm_intro=(
             "Behold the Queen, {username}! She wields the combined power of both a rook and a bishop. "
-            "She can glide straight or diagonally across the entire board. Capture the pawn on f5!"
+            "She can glide straight or diagonally across the entire board. Capture the pawn on e5!"
         ),
         cm_success=(
             "Magnificent move, {username}! The Queen's immense reach makes her the ultimate attacking piece. "
             "Value her wisely: she is worth 9 points!"
         ),
-        cm_hint="Move your Queen from b2 diagonally up and to the right to land on f5.",
+        cm_hint="Move your Queen from b2 diagonally up and to the right to land on e5.",
         educational_note=(
             "Because the Queen is so valuable, developing her too early can allow opponents to gain tempos by attacking her. "
             "Bring her out when the time is right to deliver crushing blows."

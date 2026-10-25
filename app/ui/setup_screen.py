@@ -6,16 +6,20 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QFrame,
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QScrollArea,
     QVBoxLayout,
     QWidget,
+    QListView,
+    QStyleFactory,
 )
 
-from app.ui.styles import combo_style
+from app.ui.styles import checkbox_style, combo_style
 
 
 class SetupScreen(QWidget):
@@ -31,34 +35,45 @@ class SetupScreen(QWidget):
         super().__init__(parent)
         self.setStyleSheet("QWidget { background-color: #F8FAFC; }")
 
-        main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(40, 32, 40, 40)
-        main_layout.setSpacing(24)
+        outer_layout = QVBoxLayout(self)
+        outer_layout.setContentsMargins(0, 0, 0, 0)
+        outer_layout.setSpacing(0)
+
+        # Scroll area for seamless mobile scaling
+        self._scroll = QScrollArea(self)
+        self._scroll.setWidgetResizable(True)
+        self._scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self._scroll.setStyleSheet("QScrollArea { border: none; background-color: #F8FAFC; }")
+
+        self._scroll_content = QWidget()
+        self._scroll_content.setStyleSheet("background-color: #F8FAFC;")
+        main_layout = QVBoxLayout(self._scroll_content)
+        main_layout.setContentsMargins(20, 20, 20, 30)
+        main_layout.setSpacing(20)
 
         # Top navigation bar
         top_bar = QHBoxLayout()
         self.back_button = QPushButton("← Back to Menu")
         self.back_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.back_button.setMinimumHeight(44)
         self.back_button.setStyleSheet(
             """
             QPushButton {
-                background-color: transparent;
-                color: #475569;
-                border: 1px solid #CBD5E1;
+                background-color: #FFFFFF;
+                color: #334155;
+                border: 1.5px solid #CBD5E1;
                 border-radius: 8px;
-                padding: 8px 16px;
+                padding: 10px 18px;
                 font-size: 13px;
-                font-weight: 600;
+                font-weight: 700;
             }
-            QPushButton:hover { background-color: #F1F5F9; color: #0F172A; }
+            QPushButton:hover { background-color: #F1F5F9; color: #0F172A; border-color: #94A3B8; }
             """
         )
         self.back_button.clicked.connect(self.back_to_menu_clicked.emit)
         top_bar.addWidget(self.back_button)
         top_bar.addStretch(1)
         main_layout.addLayout(top_bar)
-
-        main_layout.addStretch(1)
 
         # Centered setup card container
         center_container = QWidget()
@@ -93,14 +108,18 @@ class SetupScreen(QWidget):
         card_desc.setWordWrap(True)
         card_layout.addWidget(card_desc)
 
+        
         style_sheet = combo_style()
 
         # 1. Mode Selection
         mode_label = QLabel("Game Mode")
-        mode_label.setStyleSheet("font-size: 13px; font-weight: 700; color: #1E293B;")
+        mode_label.setStyleSheet(
+            "font-size: 13px; font-weight: 700; color: #1E293B;"
+        )
         card_layout.addWidget(mode_label)
 
         self.mode_combo = QComboBox()
+        self.mode_combo.setStyle(QStyleFactory.create("Fusion"))
         self.mode_combo.setObjectName("modeCombo")
         self.mode_combo.addItems([self.LOCAL_MODE, self.COMPUTER_MODE])
         self.mode_combo.setStyleSheet(style_sheet)
@@ -109,10 +128,13 @@ class SetupScreen(QWidget):
 
         # 2. Side / Perspective Selection
         self.color_label = QLabel("Play As (Perspective)")
-        self.color_label.setStyleSheet("font-size: 13px; font-weight: 700; color: #1E293B;")
+        self.color_label.setStyleSheet(
+            "font-size: 13px; font-weight: 700; color: #1E293B;"
+        )
         card_layout.addWidget(self.color_label)
 
         self.color_combo = QComboBox()
+        self.color_combo.setStyle(QStyleFactory.create("Fusion"))
         self.color_combo.setObjectName("colorCombo")
         self.color_combo.addItems(["White", "Black"])
         self.color_combo.setCurrentText("White")
@@ -121,20 +143,42 @@ class SetupScreen(QWidget):
 
         # 3. Computer Difficulty
         self.difficulty_label = QLabel("Computer Difficulty")
-        self.difficulty_label.setStyleSheet("font-size: 13px; font-weight: 700; color: #1E293B;")
+        self.difficulty_label.setStyleSheet(
+            "font-size: 13px; font-weight: 700; color: #1E293B;"
+        )
         card_layout.addWidget(self.difficulty_label)
 
         self.difficulty_combo = QComboBox()
+        self.difficulty_combo.setStyle(QStyleFactory.create("Fusion"))
         self.difficulty_combo.setObjectName("difficultyCombo")
         self.difficulty_combo.addItems(["Easy", "Medium", "Hard"])
         self.difficulty_combo.setCurrentText("Medium")
         self.difficulty_combo.setStyleSheet(style_sheet)
         card_layout.addWidget(self.difficulty_combo)
 
+
         self.difficulty_hint = QLabel("(Select 'Play vs Computer' to activate difficulty)")
         self.difficulty_hint.setWordWrap(True)
         self.difficulty_hint.setStyleSheet("font-size: 11px; color: #64748B;")
         card_layout.addWidget(self.difficulty_hint)
+
+        # 4. Preferences & Toggles
+        pref_label = QLabel("Match Preferences")
+        pref_label.setStyleSheet("font-size: 13px; font-weight: 700; color: #1E293B; margin-top: 4px;")
+        card_layout.addWidget(pref_label)
+
+        cb_style = checkbox_style()
+        self.sound_checkbox = QCheckBox("Sound Effects & Audio Cues")
+        self.sound_checkbox.setObjectName("soundCheckbox")
+        self.sound_checkbox.setChecked(True)
+        self.sound_checkbox.setStyleSheet(cb_style)
+        card_layout.addWidget(self.sound_checkbox)
+
+        self.hints_checkbox = QCheckBox("Highlight Legal Moves & Captures")
+        self.hints_checkbox.setObjectName("hintsCheckbox")
+        self.hints_checkbox.setChecked(True)
+        self.hints_checkbox.setStyleSheet(cb_style)
+        card_layout.addWidget(self.hints_checkbox)
 
         # Divider
         divider = QFrame()
@@ -146,7 +190,7 @@ class SetupScreen(QWidget):
         self.start_game_button = QPushButton("Start Game →")
         self.start_game_button.setObjectName("setupStartGameBtn")
         self.start_game_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.start_game_button.setMinimumHeight(46)
+        self.start_game_button.setMinimumHeight(48)
         self.start_game_button.setStyleSheet(
             """
             QPushButton {
@@ -154,7 +198,7 @@ class SetupScreen(QWidget):
                 color: #FFFFFF;
                 border: none;
                 border-radius: 10px;
-                padding: 10px 20px;
+                padding: 12px 24px;
                 font-size: 15px;
                 font-weight: 700;
             }
@@ -168,6 +212,9 @@ class SetupScreen(QWidget):
         center_layout.addWidget(setup_card)
         main_layout.addWidget(center_container, 0, Qt.AlignmentFlag.AlignCenter)
         main_layout.addStretch(2)
+
+        self._scroll.setWidget(self._scroll_content)
+        outer_layout.addWidget(self._scroll)
 
         self._update_controls()
 
