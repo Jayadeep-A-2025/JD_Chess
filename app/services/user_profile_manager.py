@@ -3,11 +3,14 @@ from __future__ import annotations
 """User profile and learning progress persistence manager."""
 
 import json
+import logging
 import os
 import tempfile
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 _DEFAULT_USERNAME = "Grandmaster"
 
@@ -50,8 +53,12 @@ class UserProfileManager:
     def _ensure_dir(self) -> None:
         try:
             self.storage_path.parent.mkdir(parents=True, exist_ok=True)
-        except Exception:
-            pass
+        except OSError as exc:
+            logger.warning(
+                "UserProfileManager: could not create storage directory %s: %s",
+                self.storage_path.parent,
+                exc,
+            )
 
     def _read_data(self) -> dict[str, Any]:
         if not self.storage_path.is_file():
@@ -59,7 +66,21 @@ class UserProfileManager:
         try:
             with open(self.storage_path, "r", encoding="utf-8") as f:
                 return json.load(f)
-        except Exception:
+        except json.JSONDecodeError as exc:
+            logger.error(
+                "UserProfileManager: profile file %s is corrupt (%s). "
+                "Starting with default profile.",
+                self.storage_path,
+                exc,
+            )
+            return {}
+        except OSError as exc:
+            logger.error(
+                "UserProfileManager: could not read profile file %s: %s. "
+                "Starting with default profile.",
+                self.storage_path,
+                exc,
+            )
             return {}
 
     def _write_data(self, data: dict[str, Any]) -> None:
@@ -76,9 +97,21 @@ class UserProfileManager:
                 json.dump(data, tf, indent=2)
                 temp_name = tf.name
             os.replace(temp_name, str(self.storage_path))
-        except Exception:
-            with open(self.storage_path, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=2)
+        except OSError as exc:
+            logger.error(
+                "UserProfileManager: atomic write failed for %s (%s). "
+                "Attempting direct write as fallback.",
+                self.storage_path,
+                exc,
+            )
+            try:
+                with open(self.storage_path, "w", encoding="utf-8") as f:
+                    json.dump(data, f, indent=2)
+            except OSError as exc2:
+                raise RuntimeError(
+                    f"UserProfileManager: failed to write profile to "
+                    f"{self.storage_path}: {exc2}"
+                ) from exc2
 
     def get_profile(self) -> UserProfile:
         return UserProfile.from_dict(self._read_data())

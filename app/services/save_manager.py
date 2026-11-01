@@ -3,12 +3,15 @@ from __future__ import annotations
 """Game state persistence and slot management."""
 
 import json
+import logging
 import os
 import tempfile
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -69,8 +72,12 @@ class SaveManager:
     def _ensure_dir(self) -> None:
         try:
             self.storage_path.parent.mkdir(parents=True, exist_ok=True)
-        except Exception:
-            pass
+        except OSError as exc:
+            logger.warning(
+                "SaveManager: could not create storage directory %s: %s",
+                self.storage_path.parent,
+                exc,
+            )
 
     def _read_data(self) -> dict[str, Any]:
         if not self.storage_path.is_file():
@@ -78,23 +85,48 @@ class SaveManager:
         try:
             with open(self.storage_path, "r", encoding="utf-8") as f:
                 return json.load(f)
-        except Exception:
+        except json.JSONDecodeError as exc:
+            logger.error(
+                "SaveManager: save file %s is corrupt (%s). Returning empty state.",
+                self.storage_path,
+                exc,
+            )
+            return {}
+        except OSError as exc:
+            logger.error(
+                "SaveManager: could not read save file %s: %s. Returning empty state.",
+                self.storage_path,
+                exc,
+            )
             return {}
 
     def _write_data(self, data: dict[str, Any]) -> None:
         self._ensure_dir()
         temp_dir = self.storage_path.parent if self.storage_path.parent.exists() else None
-        
-        # Write to temporary file then replace to prevent partial writes
+
+        # Atomic write: temp file then replace to prevent partial writes.
         try:
-            with tempfile.NamedTemporaryFile("w", dir=temp_dir, delete=False, encoding="utf-8") as tf:
+            with tempfile.NamedTemporaryFile(
+                "w", dir=temp_dir, delete=False, encoding="utf-8", suffix=".json"
+            ) as tf:
                 json.dump(data, tf, indent=2)
                 temp_name = tf.name
             os.replace(temp_name, str(self.storage_path))
-        except Exception:
-            # Fallback direct write
-            with open(self.storage_path, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=2)
+        except OSError as exc:
+            logger.error(
+                "SaveManager: atomic write failed for %s (%s). "
+                "Attempting direct write as fallback.",
+                self.storage_path,
+                exc,
+            )
+            try:
+                with open(self.storage_path, "w", encoding="utf-8") as f:
+                    json.dump(data, f, indent=2)
+            except OSError as exc2:
+                # Both strategies failed — raise so callers know the save did not persist.
+                raise RuntimeError(
+                    f"SaveManager: failed to write save data to {self.storage_path}: {exc2}"
+                ) from exc2
 
     def get_slots(self) -> list[SaveSlot]:
         """Return list of all 3 slots (slot_id 1 to 3)."""

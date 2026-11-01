@@ -420,11 +420,23 @@ class MainWindow(QMainWindow):
         return self.game.board.turn == self.player_color
 
     def cancel_pending_computer_move(self) -> None:
-        """Cancel any in-flight search, delay timer, or queued move."""
+        """Cancel any in-flight search, delay timer, or queued move.
+
+        Also sends a UCI 'stop' to the engine subprocess so it halts
+        immediately rather than burning CPU until the time limit expires.
+        """
         self._computer_request_id += 1
         self._pending_computer_move = None
         if self._computer_delay_timer.isActive():
             self._computer_delay_timer.stop()
+
+        # Ask the engine to abort the active search (non-blocking).
+        engine = getattr(self, "engine", None)
+        if engine is not None:
+            try:
+                engine.cancel_search()
+            except Exception:
+                pass
 
     def change_mode(self, mode: str) -> None:
         self.cancel_pending_computer_move()

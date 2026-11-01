@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import shutil
 import sys
+import threading
 
 import chess
 import chess.engine
@@ -15,9 +16,9 @@ class ComputerEngine:
 
     DIFFICULTY_SETTINGS = {
     "Novice": {"time": 0.05, "skill": 0},
-    "Easy": {"time": 0.15, "skill": 3},
+    "Easy":   {"time": 0.15, "skill": 3},
     "Medium": {"time": 0.50, "skill": 8},
-    "Hard": {"time": 1.20, "skill": 20},
+    "Hard":   {"time": 1.20, "skill": 20},
 }
 
     def __init__(self, engine_path: str | None = None) -> None:
@@ -28,6 +29,9 @@ class ComputerEngine:
             )
 
         self.engine = chess.engine.SimpleEngine.popen_uci(self.engine_path)
+        # Protects engine access from concurrent get_best_move / cancel calls
+        self._lock = threading.Lock()
+        self._searching = False
 
     @staticmethod
     def find_engine() -> str | None:
@@ -110,27 +114,62 @@ class ComputerEngine:
             difficulty, self.DIFFICULTY_SETTINGS["Medium"]
         )
 
-        if "Skill Level" in engine.options:
-            engine.configure({"Skill Level": settings["skill"]})
+        with self._lock:
+            if "Skill Level" in engine.options:
+                engine.configure({"Skill Level": settings["skill"]})
 
-        # If it's Easy mode, introduce a chance to make a random amateur move (e.g., 35% of the time)
-        if difficulty == "Easy":
-            import random
-            legal_moves = list(board.legal_moves)
-            # 35% chance to play a completely random move, simulating a beginner blunder
-            if legal_moves and random.random() < 0.35:
-                return random.choice(legal_moves).uci()
+            # If it's Easy mode, introduce a chance to make a random amateur move (e.g., 35% of the time)
+            if difficulty == "Easy":
+                import random
+                legal_moves = list(board.legal_moves)
+                # 35% chance to play a completely random move, simulating a beginner blunder
+                if legal_moves and random.random() < 0.35:
+                    return random.choice(legal_moves).uci()
 
-        result = engine.play(
-            board,
-            chess.engine.Limit(time=settings["time"]),
-        )
+            self._searching = True
+            try:
+                result = engine.play(
+                    board,
+                    chess.engine.Limit(time=settings["time"]),
+                )
+            finally:
+                self._searching = False
+
         return result.move.uci() if result.move else None
 
+    def cancel_search(self) -> None:
+        """Send a stop command to the engine subprocess if a search is in progress.
+
+        chess.engine.SimpleEngine runs the engine process asynchronously under
+        asyncio.  The cleanest cross-thread way to interrupt an in-progress
+        ``engine.play()`` call is to write ``stop\\n`` directly to the engine
+        process's stdin.  This causes the engine to return its best move so far
+        immediately, which lets the blocking ``engine.play()`` call return
+        quickly on the background thread without requiring us to call any
+        asyncio internals.
+        """
+        engine = getattr(self, "engine", None)
+        if engine is None or not self._searching:
+            return
+        try:
+            # Access the underlying transport's stdin to send a UCI stop command.
+            proc = getattr(engine, "_transport", None) or getattr(engine, "transport", None)
+            if proc is not None:
+                stdin = getattr(proc, "stdin", None) or getattr(proc, "_stdin", None)
+                if stdin is not None and not getattr(stdin, "closed", True):
+                    stdin.write(b"stop\n")
+                    stdin.flush()
+        except Exception:
+            pass
+
     def close(self) -> None:
-        if self.engine is not None:
-            self.engine.quit()
-            self.engine = None
+        with self._lock:
+            if self.engine is not None:
+                try:
+                    self.engine.quit()
+                except Exception:
+                    pass
+                self.engine = None
 
 
 # Backward-compatible alias

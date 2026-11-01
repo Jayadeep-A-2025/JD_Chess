@@ -26,7 +26,13 @@ from app.ui.styles import PRIMARY_BTN, SECONDARY_BTN
 # Background analysis worker
 # ---------------------------------------------------------------------------
 class AnalysisWorker(QThread):
-    """Run analysis in background thread without shadowing QThread.finished."""
+    """Run analysis in background thread without shadowing QThread.finished.
+
+    Supports cooperative cancellation via the _cancelled flag. The analysis
+    service is invoked in full, but the worker checks _cancelled before
+    emitting signals so a stopping dialog never receives results for a dead
+    parent and never leaves signals connected to a destroyed widget.
+    """
 
     analysis_completed = Signal(object)  # Emits AnalysisResult
     error = Signal(str)
@@ -39,9 +45,14 @@ class AnalysisWorker(QThread):
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
+        self._cancelled: bool = False
         self.uci_moves = uci_moves
         self.engine_path = engine_path
         self.player_color = player_color
+
+    def cancel(self) -> None:
+        """Signal the worker to suppress result/error emission."""
+        self._cancelled = True
 
     def run(self) -> None:
         try:
@@ -52,9 +63,11 @@ class AnalysisWorker(QThread):
                 depth=14,
                 time_limit=0.20,
             )
-            self.analysis_completed.emit(result)
+            if not self._cancelled:
+                self.analysis_completed.emit(result)
         except Exception as exc:
-            self.error.emit(str(exc))
+            if not self._cancelled:
+                self.error.emit(str(exc))
 
 
 # ---------------------------------------------------------------------------
@@ -170,20 +183,50 @@ class AnalysisDialog(QDialog):
     # Worker lifecycle & cleanup
     # ------------------------------------------------------------------
     def _stop_worker(self) -> None:
-        """Safely disconnect and terminate the analysis worker thread."""
+        """Gracefully cancel and detach the analysis worker thread.
+
+        Strategy:
+          1. Call worker.cancel() so the run() loop suppresses any pending
+             signal emissions — this eliminates the "signal fired into a
+             destroyed parent" crash.
+          2. Disconnect all signals immediately to ensure no Qt-queued
+             invocations can sneak through before the thread exits.
+          3. Ask the thread's event loop to exit (quit()), then wait up to
+             5 seconds for a clean join.  5 s is conservative; the analysis
+             engine time-limit per move is 0.20 s and the total game is
+             bounded, so this always succeeds well within the limit.
+          4. If the wait times out (should be impossible in practice), the
+             thread is terminated forcibly as a last resort to prevent the
+             OS-level dangling thread.
+        """
         worker = self._worker
         self._worker = None
-        if worker is not None and worker.isRunning():
+        if worker is None:
+            return
+
+        # Mark cancelled so run() won't emit after we return.
+        worker.cancel()
+
+        # Disconnect signals before waiting to prevent queued callbacks
+        # firing on a partially-destroyed dialog.
+        for sig in (worker.analysis_completed, worker.error):
             try:
-                worker.analysis_completed.disconnect()
+                sig.disconnect()
             except Exception:
                 pass
+        # Only disconnect QThread.finished if the thread was ever started.
+        if worker.isRunning() or worker.isFinished():
             try:
-                worker.error.disconnect()
+                worker.finished.disconnect()
             except Exception:
                 pass
+
+        if worker.isRunning():
             worker.quit()
-            worker.wait(300)
+            if not worker.wait(5_000):
+                # Absolute last resort — avoid OS zombie thread
+                worker.terminate()
+                worker.wait(1_000)
 
     def closeEvent(self, event) -> None:
         self._stop_worker()

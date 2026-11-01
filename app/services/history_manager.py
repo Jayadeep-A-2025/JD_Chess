@@ -3,6 +3,7 @@ from __future__ import annotations
 """Match history and player rating tracking service."""
 
 import json
+import logging
 import math
 import os
 import tempfile
@@ -10,6 +11,8 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -23,13 +26,27 @@ def _expected_score(rating_a: float, rating_b: float) -> float:
     return 1.0 / (1.0 + math.pow(10, (rating_b - rating_a) / 400.0))
 
 
+_VALID_RESULTS = frozenset({"win", "loss", "draw"})
+
+
 def compute_rating_change(
     player_rating: float,
     opponent_rating: float,
     result: str,  # "win" | "loss" | "draw"
 ) -> int:
-    """Return the integer Elo delta for the player."""
-    actual = {"win": 1.0, "draw": 0.5, "loss": 0.0}.get(result, 0.5)
+    """Return the integer Elo delta for the player.
+
+    Raises ``ValueError`` for any result string that is not one of the
+    three canonical values ``"win"``, ``"loss"``, or ``"draw"`` so that
+    callers are forced to handle invalid inputs rather than silently
+    absorbing them as phantom draws.
+    """
+    if result not in _VALID_RESULTS:
+        raise ValueError(
+            f"compute_rating_change: invalid result {result!r}. "
+            f"Expected one of {sorted(_VALID_RESULTS)}."
+        )
+    actual = {"win": 1.0, "draw": 0.5, "loss": 0.0}[result]
     expected = _expected_score(player_rating, opponent_rating)
     return int(round(_K_FACTOR * (actual - expected)))
 
@@ -105,8 +122,12 @@ class HistoryManager:
     def _ensure_dir(self) -> None:
         try:
             self.storage_path.parent.mkdir(parents=True, exist_ok=True)
-        except Exception:
-            pass
+        except OSError as exc:
+            logger.warning(
+                "HistoryManager: could not create storage directory %s: %s",
+                self.storage_path.parent,
+                exc,
+            )
 
     def _read_data(self) -> dict[str, Any]:
         if not self.storage_path.is_file():
@@ -118,7 +139,20 @@ class HistoryManager:
             data.setdefault("rating", _DEFAULT_RATING)
             data.setdefault("matches", [])
             return data
-        except Exception:
+        except json.JSONDecodeError as exc:
+            logger.error(
+                "HistoryManager: history file %s is corrupt (%s). "
+                "Returning default state — existing match data may be lost.",
+                self.storage_path,
+                exc,
+            )
+            return {"rating": _DEFAULT_RATING, "matches": []}
+        except OSError as exc:
+            logger.error(
+                "HistoryManager: could not read history file %s: %s.",
+                self.storage_path,
+                exc,
+            )
             return {"rating": _DEFAULT_RATING, "matches": []}
 
     def _write_data(self, data: dict[str, Any]) -> None:
@@ -133,9 +167,21 @@ class HistoryManager:
                 json.dump(data, tf, indent=2)
                 temp_name = tf.name
             os.replace(temp_name, str(self.storage_path))
-        except Exception:
-            with open(self.storage_path, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=2)
+        except OSError as exc:
+            logger.error(
+                "HistoryManager: atomic write failed for %s (%s). "
+                "Attempting direct write as fallback.",
+                self.storage_path,
+                exc,
+            )
+            try:
+                with open(self.storage_path, "w", encoding="utf-8") as f:
+                    json.dump(data, f, indent=2)
+            except OSError as exc2:
+                raise RuntimeError(
+                    f"HistoryManager: failed to write history to "
+                    f"{self.storage_path}: {exc2}"
+                ) from exc2
 
     # ------------------------------------------------------------------
     # Public API

@@ -178,10 +178,27 @@ def _heuristic_analyze_game(
 
             score_after_cp = _heuristic_eval_white(board)
 
-            if color == "White":
-                cp_loss = max(0, score_before_cp - score_after_cp)
+            # Compute cp_loss relative to the BEST available move score, not
+            # just the naive before→after delta.  This prevents over-penalising
+            # moves that happen to reduce material temporarily for sound reasons.
+            #
+            # From White's perspective:
+            #   best_eval is the score after playing the best move.
+            #   score_after_cp is the score after playing the actual move.
+            #   cp_loss = how much worse the actual move is vs the best move.
+            #
+            # For Black (minimising), the sign is reversed: a higher
+            # score_after_cp is worse for Black.
+            if best_move is not None:
+                if color == "White":
+                    # best_eval is already maximised; actual should be ≤ best_eval
+                    cp_loss = max(0, best_eval - score_after_cp)
+                else:
+                    # best_eval is minimised; actual should be ≥ best_eval
+                    cp_loss = max(0, score_after_cp - best_eval)
             else:
-                cp_loss = max(0, score_after_cp - score_before_cp)
+                # No legal moves left — treat as no loss
+                cp_loss = 0
 
             classification = _classify(cp_loss)
 
