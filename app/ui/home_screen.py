@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-"""Window 1: Main Home Menu with User Profile, CM Greetings, 4 Primary Paths, and Mobile Responsive Layout."""
+"""Window 1: Main Home Menu with User Profile, companion CM, and 4 primary options.
+Styled in Royal Gold & Luxury Mahogany theme.
+"""
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
@@ -12,7 +14,6 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QPushButton,
     QScrollArea,
-    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
@@ -24,7 +25,7 @@ from app.ui.styles import PRIMARY_BTN, SECONDARY_BTN
 
 
 class EditUsernameDialog(QDialog):
-    """High-contrast, mobile-friendly dialog to edit custom username with bold, visible buttons."""
+    """High-contrast, mobile-friendly dialog to edit custom username styled in Royal Gold & Luxury Mahogany."""
 
     def __init__(self, current_name: str, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -32,19 +33,28 @@ class EditUsernameDialog(QDialog):
         self.setModal(True)
         self.setMinimumWidth(300)
         self.setMaximumWidth(420)
-        self.setStyleSheet("QDialog { background-color: #FFFFFF; }")
+        self.setStyleSheet(
+            """
+            QDialog {
+                background-color: #1E130B;
+                color: #FDFBF7;
+                border: 1.5px solid #D97706;
+                border-radius: 16px;
+            }
+            """
+        )
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(24, 24, 24, 24)
         layout.setSpacing(16)
 
         title = QLabel("Edit Player Name")
-        title.setStyleSheet("font-size: 18px; font-weight: 800; color: #0F172A;")
+        title.setStyleSheet("font-size: 18px; font-weight: 800; color: #FDFBF7;")
         layout.addWidget(title)
 
         desc = QLabel("Enter your username for companion CM dialogues and match records:")
         desc.setWordWrap(True)
-        desc.setStyleSheet("font-size: 13px; color: #475569; font-weight: 500;")
+        desc.setStyleSheet("font-size: 13px; color: #D97706; font-weight: 500;")
         layout.addWidget(desc)
 
         self.input_field = QLineEdit()
@@ -54,13 +64,17 @@ class EditUsernameDialog(QDialog):
         self.input_field.setStyleSheet(
             """
             QLineEdit {
-                background-color: #FFFFFF;
-                color: #0F172A;
-                border: 2px solid #2563EB;
+                background-color: #2A1B12;
+                color: #FDFBF7;
+                border: 1.5px solid #D97706;
                 border-radius: 8px;
                 padding: 8px 14px;
                 font-size: 14px;
                 font-weight: 600;
+            }
+            QLineEdit:focus {
+                border: 2px solid #FBBF24;
+                background-color: #352317;
             }
             """
         )
@@ -89,8 +103,8 @@ class EditUsernameDialog(QDialog):
         layout.addLayout(btn_row)
 
     def get_username(self) -> str:
-    	username = self.input_field.text().strip()
-    	return username if username else "Grandmaster"
+        username = self.input_field.text().strip()
+        return username if username else "Grandmaster"
 
 
 class HomeScreen(QWidget):
@@ -119,7 +133,7 @@ class HomeScreen(QWidget):
         self.engine_path = engine_path
         self._is_mobile_grid = False
 
-        self.setStyleSheet("QWidget { background-color: #F8FAFC; }")
+        self.setStyleSheet("QWidget { background-color: #1E130B; color: #FDFBF7; }")
 
         root_layout = QVBoxLayout(self)
         root_layout.setContentsMargins(0, 0, 0, 0)
@@ -129,11 +143,11 @@ class HomeScreen(QWidget):
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setFrameShape(QFrame.Shape.NoFrame)
-        self.scroll_area.setStyleSheet("QScrollArea { background: transparent; border: none; }")
-        self.scroll_area.viewport().setStyleSheet("background: transparent;")
+        self.scroll_area.setStyleSheet("QScrollArea { background-color: #1E130B; border: none; }")
+        self.scroll_area.viewport().setStyleSheet("background-color: #1E130B;")
 
         self.scroll_content = QWidget()
-        self.scroll_content.setStyleSheet("background: transparent;")
+        self.scroll_content.setStyleSheet("background-color: #1E130B;")
         main_layout = QVBoxLayout(self.scroll_content)
         main_layout.setContentsMargins(20, 20, 20, 24)
         main_layout.setSpacing(18)
@@ -161,23 +175,23 @@ class HomeScreen(QWidget):
         emblem = QLabel("♔")
         emblem.setAlignment(Qt.AlignmentFlag.AlignCenter)
         emblem.setStyleSheet(
-            "font-size: 46px; color: #1E293B; background: #FFFFFF; "
-            "border: 2px solid #E2E8F0; border-radius: 34px; "
-            "min-width: 68px; max-width: 68px; min-height: 68px; max-height: 68px;"
+            "font-size: 46px; color: #D97706; background-color: #2A1B12; "
+            "border: 2px solid #D97706; border-radius: 36px; "
+            "min-width: 72px; max-width: 72px; min-height: 72px; max-height: 72px;"
         )
         hero_layout.addWidget(emblem, 0, Qt.AlignmentFlag.AlignCenter)
 
         title = QLabel("JD CHESS")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title.setStyleSheet(
-            "font-size: 32px; font-weight: 900; color: #0F172A; letter-spacing: 1.5px;"
+            "font-size: 32px; font-weight: 900; color: #FDFBF7; letter-spacing: 2px;"
         )
         hero_layout.addWidget(title)
 
         subtitle = QLabel("Play, learn, and master chess with intelligent offline computer analysis.")
         subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
         subtitle.setWordWrap(True)
-        subtitle.setStyleSheet("font-size: 13px; color: #64748B; font-weight: 500;")
+        subtitle.setStyleSheet("font-size: 13px; color: #D97706; font-weight: 600;")
         hero_layout.addWidget(subtitle)
 
         # Engine Status Badge
@@ -201,7 +215,7 @@ class HomeScreen(QWidget):
             btn_text="New Game →",
             btn_id="homeNewGameBtn",
             badge_text="Fresh Match",
-            badge_color=("#2563EB", "#EFF6FF", "#DBEAFE"),
+            badge_color=("#D97706", "rgba(217, 119, 6, 0.15)", "#D97706"),
             on_click=self.new_game_clicked.emit,
             is_primary=True,
         )
@@ -226,7 +240,7 @@ class HomeScreen(QWidget):
         )
         footer_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         footer_lbl.setWordWrap(True)
-        footer_lbl.setStyleSheet("font-size: 11px; color: #94A3B8; font-weight: 500; margin-top: 6px;")
+        footer_lbl.setStyleSheet("font-size: 11px; color: #D97706; font-weight: 600; margin-top: 6px;")
         center_layout.addWidget(footer_lbl)
 
         main_layout.addWidget(self.center_container, 0, Qt.AlignmentFlag.AlignCenter)
@@ -243,7 +257,6 @@ class HomeScreen(QWidget):
     # -------------------------------------------------------------
     def _apply_grid_layout(self, is_mobile: bool) -> None:
         """Dynamically re-layout 4 cards into 1 column (mobile) or 2x2 (desktop)."""
-        # Remove items from grid
         while self.grid.count():
             self.grid.takeAt(0)
 
@@ -276,64 +289,51 @@ class HomeScreen(QWidget):
         card.setStyleSheet(
             """
             QFrame {
-                background-color: #FFFFFF;
-                border: 1.5px solid #CBD5E1;
-                border-radius: 14px;
+                background-color: #2A1B12;
+                border: 1.5px solid #D97706;
+                border-radius: 16px;
             }
             """
         )
         layout = QHBoxLayout(card)
-        layout.setContentsMargins(16, 12, 16, 12)
+        layout.setContentsMargins(18, 14, 18, 14)
         layout.setSpacing(14)
 
         # User avatar & name
         user_avatar = QLabel("👤")
-        user_avatar.setStyleSheet("font-size: 22px;")
+        user_avatar.setStyleSheet("font-size: 24px;")
         layout.addWidget(user_avatar)
 
         user_info = QVBoxLayout()
         user_info.setSpacing(2)
         self.username_label = QLabel()
-        self.username_label.setStyleSheet("font-size: 14px; font-weight: 800; color: #0F172A;")
+        self.username_label.setStyleSheet("font-size: 15px; font-weight: 800; color: #FDFBF7;")
         user_info.addWidget(self.username_label)
 
         sub_user = QLabel("Player Profile")
-        sub_user.setStyleSheet("font-size: 11px; color: #64748B; font-weight: 600;")
+        sub_user.setStyleSheet("font-size: 11px; color: #D97706; font-weight: 700;")
         user_info.addWidget(sub_user)
         layout.addLayout(user_info)
 
-        # Edit username button (Touch-friendly 38px height)
+        # Edit username button (Touch-friendly 40px height)
         self.edit_user_btn = QPushButton("✏️ Edit Name")
         self.edit_user_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.edit_user_btn.setMinimumHeight(38)
-        self.edit_user_btn.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #F8FAFC;
-                color: #0F172A;
-                border: 1.5px solid #CBD5E1;
-                border-radius: 8px;
-                padding: 6px 14px;
-                font-size: 12px;
-                font-weight: 700;
-            }
-            QPushButton:hover { background-color: #EFF6FF; border-color: #3B82F6; color: #1D4ED8; }
-            """
-        )
+        self.edit_user_btn.setMinimumHeight(40)
+        self.edit_user_btn.setStyleSheet(SECONDARY_BTN)
         self.edit_user_btn.clicked.connect(self._prompt_edit_username)
         layout.addWidget(self.edit_user_btn)
 
         # Vertical divider
         div = QFrame()
         div.setFrameShape(QFrame.Shape.VLine)
-        div.setStyleSheet("color: #E2E8F0; max-width: 1px; min-width: 1px;")
+        div.setStyleSheet("color: rgba(217, 119, 6, 0.4); max-width: 1px; min-width: 1px;")
         layout.addWidget(div)
 
         # CM Greeting Pill
         self.cm_greeting_lbl = QLabel()
         self.cm_greeting_lbl.setWordWrap(True)
         self.cm_greeting_lbl.setStyleSheet(
-            "font-size: 12px; color: #1E293B; font-weight: 600; line-height: 1.3;"
+            "font-size: 13px; color: #FDFBF7; font-weight: 600; line-height: 1.3;"
         )
         layout.addWidget(self.cm_greeting_lbl, 1)
 
@@ -386,12 +386,13 @@ class HomeScreen(QWidget):
         card.setStyleSheet(
             """
             QFrame#homeCard {
-                background-color: #FFFFFF;
-                border: 1.5px solid #CBD5E1;
-                border-radius: 14px;
+                background-color: #2A1B12;
+                border: 1.5px solid #D97706;
+                border-radius: 16px;
             }
             QFrame#homeCard:hover {
-                border-color: #2563EB;
+                border-color: #FBBF24;
+                background-color: #352317;
             }
             """
         )
@@ -404,7 +405,7 @@ class HomeScreen(QWidget):
         badge = QLabel(badge_text)
         badge.setStyleSheet(
             f"font-size: 11px; font-weight: 700; color: {fg}; "
-            f"background-color: {bg}; border: 1px solid {border}; "
+            f"background-color: {bg}; border: 1.5px solid {border}; "
             "border-radius: 6px; padding: 2px 8px;"
         )
         top_row.addWidget(badge)
@@ -412,12 +413,12 @@ class HomeScreen(QWidget):
         layout.addLayout(top_row)
 
         card_title = QLabel(title_text)
-        card_title.setStyleSheet("font-size: 17px; font-weight: 800; color: #0F172A;")
+        card_title.setStyleSheet("font-size: 18px; font-weight: 800; color: #FDFBF7;")
         layout.addWidget(card_title)
 
         card_desc = QLabel(desc_text)
         card_desc.setWordWrap(True)
-        card_desc.setStyleSheet("font-size: 12px; color: #475569; line-height: 1.4; font-weight: 500;")
+        card_desc.setStyleSheet("font-size: 12px; color: #E6CCB2; line-height: 1.4; font-weight: 500;")
         layout.addWidget(card_desc)
 
         layout.addStretch(1)
@@ -441,12 +442,13 @@ class HomeScreen(QWidget):
         card.setStyleSheet(
             """
             QFrame#homeCard {
-                background-color: #FFFFFF;
-                border: 1.5px solid #CBD5E1;
-                border-radius: 14px;
+                background-color: #2A1B12;
+                border: 1.5px solid #D97706;
+                border-radius: 16px;
             }
             QFrame#homeCard:hover {
-                border-color: #2563EB;
+                border-color: #FBBF24;
+                background-color: #352317;
             }
             """
         )
@@ -458,8 +460,8 @@ class HomeScreen(QWidget):
         status_badge = QLabel("0 / 3 Slots")
         status_badge.setObjectName("saveStatusBadge")
         status_badge.setStyleSheet(
-            "font-size: 11px; font-weight: 700; color: #475569; "
-            "background-color: #F1F5F9; border: 1px solid #E2E8F0; "
+            "font-size: 11px; font-weight: 700; color: #D97706; "
+            "background-color: rgba(217, 119, 6, 0.15); border: 1.5px solid #D97706; "
             "border-radius: 6px; padding: 2px 8px;"
         )
         top_row.addWidget(status_badge)
@@ -467,12 +469,12 @@ class HomeScreen(QWidget):
         layout.addLayout(top_row)
 
         card_title = QLabel("Continue Game")
-        card_title.setStyleSheet("font-size: 17px; font-weight: 800; color: #0F172A;")
+        card_title.setStyleSheet("font-size: 18px; font-weight: 800; color: #FDFBF7;")
         layout.addWidget(card_title)
 
         card_desc = QLabel("Resume a saved match where you left off from one of your active slots.")
         card_desc.setWordWrap(True)
-        card_desc.setStyleSheet("font-size: 12px; color: #475569; line-height: 1.4; font-weight: 500;")
+        card_desc.setStyleSheet("font-size: 12px; color: #E6CCB2; line-height: 1.4; font-weight: 500;")
         layout.addWidget(card_desc)
 
         layout.addStretch(1)
@@ -493,12 +495,13 @@ class HomeScreen(QWidget):
         card.setStyleSheet(
             """
             QFrame#homeCard {
-                background-color: #FFFFFF;
-                border: 1.5px solid #CBD5E1;
-                border-radius: 14px;
+                background-color: #2A1B12;
+                border: 1.5px solid #D97706;
+                border-radius: 16px;
             }
             QFrame#homeCard:hover {
-                border-color: #10B981;
+                border-color: #FBBF24;
+                background-color: #352317;
             }
             """
         )
@@ -509,8 +512,8 @@ class HomeScreen(QWidget):
         top_row = QHBoxLayout()
         badge = QLabel("0 / 16 Mastered")
         badge.setStyleSheet(
-            "font-size: 11px; font-weight: 700; color: #059669; "
-            "background-color: #ECFDF5; border: 1px solid #A7F3D0; "
+            "font-size: 11px; font-weight: 700; color: #10B981; "
+            "background-color: rgba(16, 185, 129, 0.15); border: 1.5px solid #10B981; "
             "border-radius: 6px; padding: 2px 8px;"
         )
         top_row.addWidget(badge)
@@ -518,12 +521,12 @@ class HomeScreen(QWidget):
         layout.addLayout(top_row)
 
         card_title = QLabel("Learn Chess with CM")
-        card_title.setStyleSheet("font-size: 17px; font-weight: 800; color: #0F172A;")
+        card_title.setStyleSheet("font-size: 18px; font-weight: 800; color: #FDFBF7;")
         layout.addWidget(card_title)
 
         card_desc = QLabel("Interactive lessons guided by your AI buddy CM, from piece movements to pro tactics.")
         card_desc.setWordWrap(True)
-        card_desc.setStyleSheet("font-size: 12px; color: #475569; line-height: 1.4; font-weight: 500;")
+        card_desc.setStyleSheet("font-size: 12px; color: #E6CCB2; line-height: 1.4; font-weight: 500;")
         layout.addWidget(card_desc)
 
         layout.addStretch(1)
@@ -532,22 +535,7 @@ class HomeScreen(QWidget):
         btn.setObjectName("homeLearnBtn")
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
         btn.setMinimumHeight(44)
-        btn.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #10B981;
-                color: #FFFFFF;
-                border: none;
-                border-radius: 10px;
-                padding: 10px 18px;
-                font-size: 14px;
-                font-weight: 700;
-                min-height: 44px;
-            }
-            QPushButton:hover { background-color: #059669; }
-            QPushButton:pressed { background-color: #047857; }
-            """
-        )
+        btn.setStyleSheet(PRIMARY_BTN)
         btn.clicked.connect(self.learn_chess_clicked.emit)
         layout.addWidget(btn)
 
@@ -559,12 +547,13 @@ class HomeScreen(QWidget):
         card.setStyleSheet(
             """
             QFrame#homeCard {
-                background-color: #FFFFFF;
-                border: 1.5px solid #CBD5E1;
-                border-radius: 14px;
+                background-color: #2A1B12;
+                border: 1.5px solid #D97706;
+                border-radius: 16px;
             }
             QFrame#homeCard:hover {
-                border-color: #8B5CF6;
+                border-color: #FBBF24;
+                background-color: #352317;
             }
             """
         )
@@ -575,8 +564,8 @@ class HomeScreen(QWidget):
         top_row = QHBoxLayout()
         badge = QLabel("⭐ 1200 Rating")
         badge.setStyleSheet(
-            "font-size: 11px; font-weight: 700; color: #7C3AED; "
-            "background-color: #F5F3FF; border: 1px solid #DDD6FE; "
+            "font-size: 11px; font-weight: 700; color: #FBBF24; "
+            "background-color: rgba(251, 191, 36, 0.15); border: 1.5px solid #FBBF24; "
             "border-radius: 6px; padding: 2px 8px;"
         )
         top_row.addWidget(badge)
@@ -584,12 +573,12 @@ class HomeScreen(QWidget):
         layout.addLayout(top_row)
 
         card_title = QLabel("History & Rating")
-        card_title.setStyleSheet("font-size: 17px; font-weight: 800; color: #0F172A;")
+        card_title.setStyleSheet("font-size: 18px; font-weight: 800; color: #FDFBF7;")
         layout.addWidget(card_title)
 
         card_desc = QLabel("Explore past match logs across months, analyze win rates, and monitor Elo rating growth.")
         card_desc.setWordWrap(True)
-        card_desc.setStyleSheet("font-size: 12px; color: #475569; line-height: 1.4; font-weight: 500;")
+        card_desc.setStyleSheet("font-size: 12px; color: #E6CCB2; line-height: 1.4; font-weight: 500;")
         layout.addWidget(card_desc)
 
         layout.addStretch(1)
@@ -614,16 +603,16 @@ class HomeScreen(QWidget):
             self.engine_badge.setText("● Computer Ready")
             self.engine_badge.setToolTip(f"Engine available: {path or 'System Engine'}")
             self.engine_badge.setStyleSheet(
-                "font-size: 11px; font-weight: 600; color: #15803D; "
-                "background-color: #DCFCE7; border: 1px solid #86EFAC; "
+                "font-size: 11px; font-weight: 700; color: #10B981; "
+                "background-color: rgba(16, 185, 129, 0.15); border: 1.5px solid #10B981; "
                 "border-radius: 12px; padding: 4px 14px;"
             )
         else:
             self.engine_badge.setText("⚠ Computer Not Found")
             self.engine_badge.setToolTip("Install Computer chess engine to play against AI.")
             self.engine_badge.setStyleSheet(
-                "font-size: 11px; font-weight: 600; color: #B91C1C; "
-                "background-color: #FEE2E2; border: 1px solid #FCA5A5; "
+                "font-size: 11px; font-weight: 700; color: #EF4444; "
+                "background-color: rgba(239, 68, 68, 0.15); border: 1.5px solid #EF4444; "
                 "border-radius: 12px; padding: 4px 14px;"
             )
 
@@ -633,15 +622,15 @@ class HomeScreen(QWidget):
         if count > 0:
             self.save_status_badge.setText(f"{count} / 3 Active Saves")
             self.save_status_badge.setStyleSheet(
-                "font-size: 11px; font-weight: 700; color: #047857; "
-                "background-color: #D1FAE5; border: 1px solid #A7F3D0; "
+                "font-size: 11px; font-weight: 700; color: #10B981; "
+                "background-color: rgba(16, 185, 129, 0.15); border: 1.5px solid #10B981; "
                 "border-radius: 6px; padding: 2px 8px;"
             )
         else:
             self.save_status_badge.setText("No Active Saves")
             self.save_status_badge.setStyleSheet(
-                "font-size: 11px; font-weight: 700; color: #64748B; "
-                "background-color: #F1F5F9; border: 1px solid #E2E8F0; "
+                "font-size: 11px; font-weight: 700; color: #D97706; "
+                "background-color: rgba(217, 119, 6, 0.15); border: 1px solid rgba(217, 119, 6, 0.4); "
                 "border-radius: 6px; padding: 2px 8px;"
             )
         self.update_profile_ui()

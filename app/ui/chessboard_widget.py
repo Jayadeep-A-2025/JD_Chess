@@ -305,35 +305,35 @@ class ChessBoardWidget(QWidget):
             square = self.visual_to_square(row, col)
             square_name = chess.square_name(square)
             piece = self.game.board.piece_at(square)
-
+            
+            # Rich Mahogany and Warm Wood Tones
             background = (
-                "#F0D9B5" if (row + col) % 2 == 0 else "#B58863"
+                "#E6CCB2" if (row + col) % 2 == 0 else "#5C4033"
             )
-
             if square == self.selected_square:
-                background = "#BBCB45"
+                background = "#D97706"  # Royal Gold selection
             elif square_name in self.legal_destinations:
-                background = "#B86B3A"
+                background = "#B45309"  # Amber-Gold highlight
             elif square in self.last_move_squares:
-                background = "#E6C657"
+                background = "#E6C657"  # Classic Gold Last-Move Highlight
 
             button.setText(PIECE_GLYPHS.get(piece.symbol(), "") if piece else "")
             
-            # High-contrast piece coloring: crisp dark tone for white coins to ensure 100% visibility
-            piece_color = "#1E293B" if piece and piece.color == chess.WHITE else "#0F172A"
+            # High-contrast piece coloring
+            piece_color = "#FFFFFF" if piece and piece.color == chess.WHITE else "#120A05"
+            
+            # Explicitly force stylesheet with background-color and text formatting
             button.setStyleSheet(
                 f"""
                 QPushButton {{
                     background-color: {background};
                     color: {piece_color};
                     border: none;
-                    border-radius: 0px;
                     font-size: {font_size}px;
                     font-weight: bold;
-                    padding: 0px;
                 }}
                 QPushButton:hover {{
-                    border: 2px solid #667085;
+                    border: 2px solid #D97706;
                 }}
                 """
             )

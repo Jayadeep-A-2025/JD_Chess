@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-"""Interactive post-game analysis window with scorecard, annotations, and suggestions."""
+"""Interactive post-game analysis window with scorecard, annotations, and suggestions.
+Styled in Royal Gold & Luxury Mahogany theme.
+"""
 
 import chess
 from PySide6.QtCore import Qt, QThread, Signal
@@ -12,22 +14,21 @@ from PySide6.QtWidgets import (
     QProgressBar,
     QPushButton,
     QScrollArea,
-    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
 
 from app.services.analysis_service import AnalysisResult, MoveAnnotation, analyze_game
-from app.ui.styles import PRIMARY_BTN, SECONDARY_BTN, card_style, combo_style
+from app.ui.styles import PRIMARY_BTN, SECONDARY_BTN
 
 
 # ---------------------------------------------------------------------------
 # Background analysis worker
 # ---------------------------------------------------------------------------
 class AnalysisWorker(QThread):
-    """Run analysis in background thread."""
+    """Run analysis in background thread without shadowing QThread.finished."""
 
-    finished = Signal(object)   # AnalysisResult
+    analysis_completed = Signal(object)  # Emits AnalysisResult
     error = Signal(str)
 
     def __init__(
@@ -51,20 +52,20 @@ class AnalysisWorker(QThread):
                 depth=14,
                 time_limit=0.20,
             )
-            self.finished.emit(result)
+            self.analysis_completed.emit(result)
         except Exception as exc:
             self.error.emit(str(exc))
 
 
 # ---------------------------------------------------------------------------
-# Colour palette helpers
+# Classification palette helpers (tailored for dark mahogany background)
 # ---------------------------------------------------------------------------
 _CLASSIF_COLORS = {
-    "best":       ("#059669", "#D1FAE5"),   # green
-    "good":       ("#0284C7", "#E0F2FE"),   # blue
-    "inaccuracy": ("#D97706", "#FEF3C7"),   # amber
-    "mistake":    ("#EA580C", "#FFEDD5"),   # orange
-    "blunder":    ("#DC2626", "#FEE2E2"),   # red
+    "best":       ("#10B981", "rgba(16, 185, 129, 0.15)"),  # Emerald
+    "good":       ("#38BDF8", "rgba(56, 189, 248, 0.15)"),  # Sky Blue
+    "inaccuracy": ("#FBBF24", "rgba(251, 191, 36, 0.15)"),  # Amber
+    "mistake":    ("#FB923C", "rgba(251, 146, 60, 0.15)"),  # Orange
+    "blunder":    ("#EF4444", "rgba(239, 68, 68, 0.15)"),   # Red
 }
 
 
@@ -72,7 +73,7 @@ _CLASSIF_COLORS = {
 # Main Analysis Dialog
 # ---------------------------------------------------------------------------
 class AnalysisDialog(QDialog):
-    """Full post-game analysis window."""
+    """Full post-game analysis window in Royal Gold & Luxury Mahogany theme."""
 
     def __init__(
         self,
@@ -88,11 +89,19 @@ class AnalysisDialog(QDialog):
         self.player_color = player_color
         self.engine_path = engine_path
         self._result: AnalysisResult | None = None
+        self._worker: AnalysisWorker | None = None
 
         self.setWindowTitle("Game Analysis")
-        self.resize(820, 680)
-        self.setMinimumSize(640, 500)
-        self.setStyleSheet("QDialog { background-color: #F8FAFC; }")
+        self.resize(840, 700)
+        self.setMinimumSize(640, 520)
+        self.setStyleSheet(
+            """
+            QDialog {
+                background-color: #1E130B;
+                color: #FDFBF7;
+            }
+            """
+        )
 
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
@@ -101,15 +110,20 @@ class AnalysisDialog(QDialog):
         # --- Top bar ---
         top_bar = QFrame()
         top_bar.setStyleSheet(
-            "QFrame { background-color: #0F172A; border: none; }"
+            """
+            QFrame {
+                background-color: #1E130B;
+                border-bottom: 1.5px solid #D97706;
+            }
+            """
         )
-        top_bar.setFixedHeight(60)
+        top_bar.setFixedHeight(64)
         tb_layout = QHBoxLayout(top_bar)
         tb_layout.setContentsMargins(24, 0, 24, 0)
 
         title_lbl = QLabel("🔍  Post-Game Analysis")
         title_lbl.setStyleSheet(
-            "font-size: 17px; font-weight: 800; color: #F1F5F9; letter-spacing: 0.3px;"
+            "font-size: 18px; font-weight: 800; color: #FDFBF7; letter-spacing: 0.4px;"
         )
         tb_layout.addWidget(title_lbl)
         tb_layout.addStretch(1)
@@ -119,15 +133,20 @@ class AnalysisDialog(QDialog):
         close_btn.setStyleSheet(
             """
             QPushButton {
-                background-color: transparent;
-                color: #94A3B8;
-                border: 1px solid #334155;
+                background-color: #2A1B12;
+                color: #FDFBF7;
+                border: 1.5px solid #D97706;
                 border-radius: 8px;
-                padding: 5px 14px;
+                padding: 6px 16px;
                 font-size: 13px;
-                font-weight: 600;
+                font-weight: 700;
+                min-height: 36px;
             }
-            QPushButton:hover { background-color: #1E293B; color: #F1F5F9; }
+            QPushButton:hover {
+                background-color: #352317;
+                color: #D97706;
+                border-color: #B45309;
+            }
             """
         )
         close_btn.clicked.connect(self.reject)
@@ -137,14 +156,42 @@ class AnalysisDialog(QDialog):
 
         # --- Content area (stacked: loading -> results) ---
         self._content_area = QWidget()
+        self._content_area.setStyleSheet("background-color: #1E130B;")
         self._content_layout = QVBoxLayout(self._content_area)
         self._content_layout.setContentsMargins(0, 0, 0, 0)
         self._content_layout.setSpacing(0)
         root.addWidget(self._content_area, 1)
 
-        # Run analysis (will use Computer engine or heuristic fallback)
+        # Run analysis (uses Computer engine or heuristic fallback)
         self._show_loading()
         self._start_analysis()
+
+    # ------------------------------------------------------------------
+    # Worker lifecycle & cleanup
+    # ------------------------------------------------------------------
+    def _stop_worker(self) -> None:
+        """Safely disconnect and terminate the analysis worker thread."""
+        worker = self._worker
+        self._worker = None
+        if worker is not None and worker.isRunning():
+            try:
+                worker.analysis_completed.disconnect()
+            except Exception:
+                pass
+            try:
+                worker.error.disconnect()
+            except Exception:
+                pass
+            worker.quit()
+            worker.wait(300)
+
+    def closeEvent(self, event) -> None:
+        self._stop_worker()
+        super().closeEvent(event)
+
+    def reject(self) -> None:
+        self._stop_worker()
+        super().reject()
 
     # ------------------------------------------------------------------
     # Loading state
@@ -158,17 +205,17 @@ class AnalysisDialog(QDialog):
 
         spinner = QLabel("⏳")
         spinner.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        spinner.setStyleSheet("font-size: 44px;")
+        spinner.setStyleSheet("font-size: 48px;")
         vb.addWidget(spinner)
 
         msg = QLabel("Analyzing your game…  This may take a moment.")
         msg.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        msg.setStyleSheet("font-size: 14px; color: #64748B; font-weight: 500;")
+        msg.setStyleSheet("font-size: 15px; color: #FDFBF7; font-weight: 700;")
         vb.addWidget(msg)
 
-        sub = QLabel(f"Reviewing {len(self.uci_moves)} moves")
+        sub = QLabel(f"Reviewing {len(self.uci_moves)} moves with engine precision")
         sub.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        sub.setStyleSheet("font-size: 12px; color: #94A3B8;")
+        sub.setStyleSheet("font-size: 13px; color: #D97706; font-weight: 600;")
         vb.addWidget(sub)
 
         self._content_layout.addWidget(w)
@@ -182,25 +229,25 @@ class AnalysisDialog(QDialog):
 
         icon = QLabel("⚠️")
         icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        icon.setStyleSheet("font-size: 44px;")
+        icon.setStyleSheet("font-size: 48px;")
         vb.addWidget(icon)
 
         msg = QLabel("Computer engine not found.\nInstall Computer engine to enable deep move analysis.")
         msg.setAlignment(Qt.AlignmentFlag.AlignCenter)
         msg.setWordWrap(True)
-        msg.setStyleSheet("font-size: 14px; color: #64748B; font-weight: 500;")
+        msg.setStyleSheet("font-size: 14px; color: #FDFBF7; font-weight: 600;")
         vb.addWidget(msg)
 
-        # Show move list fallback
         self._show_move_list_only(vb)
-
         self._content_layout.addWidget(w)
 
     def _show_move_list_only(self, parent_layout: QVBoxLayout) -> None:
         if not self.san_moves:
             return
         history_lbl = QLabel("Move List")
-        history_lbl.setStyleSheet("font-size: 13px; font-weight: 700; color: #1E293B; margin-top: 12px;")
+        history_lbl.setStyleSheet(
+            "font-size: 14px; font-weight: 800; color: #D97706; margin-top: 14px;"
+        )
         parent_layout.addWidget(history_lbl)
         pairs = []
         for i in range(0, len(self.san_moves), 2):
@@ -209,7 +256,7 @@ class AnalysisDialog(QDialog):
             pairs.append(f"{i//2+1:>2}. {w_m:<8} {b_m}")
         moves_lbl = QLabel("\n".join(pairs))
         moves_lbl.setStyleSheet(
-            "font-family: Menlo, Monaco, 'Courier New', monospace; font-size: 12px; color: #334155;"
+            "font-family: Menlo, Monaco, 'Courier New', monospace; font-size: 13px; color: #FDFBF7;"
         )
         parent_layout.addWidget(moves_lbl)
 
@@ -220,7 +267,7 @@ class AnalysisDialog(QDialog):
         self._worker = AnalysisWorker(
             self.uci_moves, self.engine_path, self.player_color, parent=self
         )
-        self._worker.finished.connect(self._on_analysis_done)
+        self._worker.analysis_completed.connect(self._on_analysis_done)
         self._worker.error.connect(self._on_analysis_error)
         self._worker.start()
 
@@ -236,11 +283,32 @@ class AnalysisDialog(QDialog):
         w = QWidget()
         vb = QVBoxLayout(w)
         vb.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        err = QLabel(f"Analysis failed:\n{msg}")
-        err.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        vb.setContentsMargins(24, 24, 24, 24)
+
+        card = QFrame()
+        card.setStyleSheet(
+            """
+            QFrame {
+                background-color: #2A1B12;
+                border: 1.5px solid #EF4444;
+                border-radius: 14px;
+                padding: 24px;
+            }
+            """
+        )
+        card_layout = QVBoxLayout(card)
+        card_layout.setSpacing(12)
+
+        err_title = QLabel("⚠️  Analysis Notice")
+        err_title.setStyleSheet("font-size: 16px; font-weight: 800; color: #EF4444;")
+        card_layout.addWidget(err_title)
+
+        err = QLabel(f"Unable to complete full engine analysis:\n{msg}")
         err.setWordWrap(True)
-        err.setStyleSheet("font-size: 13px; color: #DC2626;")
-        vb.addWidget(err)
+        err.setStyleSheet("font-size: 13px; color: #FDFBF7; font-weight: 500;")
+        card_layout.addWidget(err)
+
+        vb.addWidget(card)
         self._content_layout.addWidget(w)
 
     # ------------------------------------------------------------------
@@ -252,14 +320,34 @@ class AnalysisDialog(QDialog):
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
-        scroll.setStyleSheet("QScrollArea { background: transparent; border: none; }")
-        scroll.viewport().setStyleSheet("background: transparent;")
+        scroll.setStyleSheet("QScrollArea { background-color: #1E130B; border: none; }")
+        scroll.viewport().setStyleSheet("background-color: #1E130B;")
 
         container = QWidget()
-        container.setStyleSheet("background: transparent;")
+        container.setStyleSheet("background-color: #1E130B;")
         vb = QVBoxLayout(container)
         vb.setContentsMargins(24, 24, 24, 24)
         vb.setSpacing(20)
+
+        # Incomplete analysis alert if any
+        if not result.is_complete and result.error:
+            notice = QFrame()
+            notice.setStyleSheet(
+                """
+                QFrame {
+                    background-color: #2A1B12;
+                    border: 1.5px solid #D97706;
+                    border-radius: 12px;
+                }
+                """
+            )
+            n_layout = QHBoxLayout(notice)
+            n_layout.setContentsMargins(16, 12, 16, 12)
+            n_lbl = QLabel(f"ℹ️  Partial Analysis: {result.error}")
+            n_lbl.setStyleSheet("color: #FDFBF7; font-size: 13px; font-weight: 600;")
+            n_lbl.setWordWrap(True)
+            n_layout.addWidget(n_lbl)
+            vb.addWidget(notice)
 
         # --- SCORECARD ---
         vb.addWidget(self._build_scorecard(result))
@@ -269,20 +357,20 @@ class AnalysisDialog(QDialog):
         if player_anns:
             anns_title = QLabel(f"Your Moves – {self.player_color}")
             anns_title.setStyleSheet(
-                "font-size: 14px; font-weight: 800; color: #0F172A; letter-spacing: 0.2px;"
+                "font-size: 16px; font-weight: 800; color: #FDFBF7; letter-spacing: 0.3px; margin-top: 6px;"
             )
             vb.addWidget(anns_title)
 
             for ann in player_anns:
                 vb.addWidget(self._build_move_card(ann))
 
-        # --- FULL GAME MOVES (ALL) ---
+        # --- OPPONENT ANNOTATIONS ---
         all_other = [a for a in result.annotations if a.color != self.player_color]
         if all_other:
             opp_color = "Black" if self.player_color == "White" else "White"
             opp_title = QLabel(f"Opponent's Moves – {opp_color}")
             opp_title.setStyleSheet(
-                "font-size: 14px; font-weight: 800; color: #0F172A; margin-top: 4px;"
+                "font-size: 16px; font-weight: 800; color: #FDFBF7; letter-spacing: 0.3px; margin-top: 12px;"
             )
             vb.addWidget(opp_title)
             for ann in all_other:
@@ -297,40 +385,40 @@ class AnalysisDialog(QDialog):
         card.setStyleSheet(
             """
             QFrame {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #0F172A, stop:1 #1E293B);
-                border-radius: 14px;
-                border: none;
+                background-color: #2A1B12;
+                border: 1.5px solid #D97706;
+                border-radius: 16px;
             }
             """
         )
         layout = QVBoxLayout(card)
-        layout.setContentsMargins(24, 20, 24, 20)
+        layout.setContentsMargins(24, 22, 24, 22)
         layout.setSpacing(16)
 
         header = QHBoxLayout()
         sc_title = QLabel("📊  Performance Scorecard")
-        sc_title.setStyleSheet("font-size: 15px; font-weight: 800; color: #F1F5F9;")
+        sc_title.setStyleSheet("font-size: 16px; font-weight: 800; color: #FDFBF7;")
         header.addWidget(sc_title)
         header.addStretch(1)
+
         grade_lbl = QLabel(result.grade)
         grade_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         grade_color = {
-            "A+": "#34D399", "A": "#34D399", "B": "#60A5FA",
-            "C": "#FBBF24", "D": "#F97316", "F": "#F87171",
-        }.get(result.grade, "#94A3B8")
+            "A+": "#10B981", "A": "#10B981", "B": "#38BDF8",
+            "C": "#FBBF24", "D": "#FB923C", "F": "#EF4444",
+        }.get(result.grade, "#D97706")
         grade_lbl.setStyleSheet(
-            f"font-size: 32px; font-weight: 900; color: {grade_color};"
+            f"font-size: 30px; font-weight: 900; color: {grade_color};"
             "min-width: 52px; max-width: 52px; min-height: 52px; max-height: 52px;"
-            f"background-color: rgba(255,255,255,0.08); border-radius: 10px;"
+            "background-color: #1E130B; border: 1.5px solid #D97706; border-radius: 10px;"
         )
         header.addWidget(grade_lbl)
         layout.addLayout(header)
 
         # Accuracy bar
         acc_row = QHBoxLayout()
-        acc_lbl = QLabel(f"Accuracy  {result.accuracy_score}%")
-        acc_lbl.setStyleSheet("font-size: 13px; color: #CBD5E1; font-weight: 600;")
+        acc_lbl = QLabel(f"Overall Accuracy:  {result.accuracy_score}%")
+        acc_lbl.setStyleSheet("font-size: 13px; color: #FDFBF7; font-weight: 700;")
         acc_row.addWidget(acc_lbl)
         acc_row.addStretch(1)
         layout.addLayout(acc_row)
@@ -339,18 +427,18 @@ class AnalysisDialog(QDialog):
         bar.setRange(0, 100)
         bar.setValue(result.accuracy_score)
         bar.setTextVisible(False)
-        bar.setFixedHeight(8)
+        bar.setFixedHeight(10)
         bar_color = (
-            "#34D399" if result.accuracy_score >= 75
+            "#10B981" if result.accuracy_score >= 75
             else "#FBBF24" if result.accuracy_score >= 50
-            else "#F87171"
+            else "#EF4444"
         )
         bar.setStyleSheet(
             f"""
             QProgressBar {{
-                background-color: rgba(255,255,255,0.12);
-                border-radius: 4px;
-                border: none;
+                background-color: #1E130B;
+                border-radius: 5px;
+                border: 1px solid rgba(217, 119, 6, 0.4);
             }}
             QProgressBar::chunk {{
                 background-color: {bar_color};
@@ -364,17 +452,17 @@ class AnalysisDialog(QDialog):
         stats_row = QHBoxLayout()
         stats_row.setSpacing(0)
 
-        def _s(label: str, value: str, color: str = "#F1F5F9") -> QWidget:
+        def _s(label: str, value: str, color: str = "#FDFBF7") -> QWidget:
             w = QWidget()
             v = QVBoxLayout(w)
             v.setSpacing(2)
             v.setAlignment(Qt.AlignmentFlag.AlignCenter)
             val = QLabel(value)
             val.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            val.setStyleSheet(f"font-size: 20px; font-weight: 900; color: {color};")
+            val.setStyleSheet(f"font-size: 22px; font-weight: 900; color: {color};")
             lbl = QLabel(label)
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            lbl.setStyleSheet("font-size: 11px; color: #94A3B8; font-weight: 500;")
+            lbl.setStyleSheet("font-size: 11px; color: #D97706; font-weight: 700; letter-spacing: 0.3px;")
             v.addWidget(val)
             v.addWidget(lbl)
             return w
@@ -382,56 +470,52 @@ class AnalysisDialog(QDialog):
         def _vd() -> QFrame:
             f = QFrame()
             f.setFrameShape(QFrame.Shape.VLine)
-            f.setStyleSheet("color: rgba(255,255,255,0.12); min-width: 1px; max-width: 1px;")
+            f.setStyleSheet("color: rgba(217, 119, 6, 0.3); min-width: 1px; max-width: 1px;")
             return f
 
-        stats_row.addWidget(_s("Blunders", str(result.blunders), "#F87171"))
+        stats_row.addWidget(_s("Blunders", str(result.blunders), "#EF4444"))
         stats_row.addWidget(_vd())
-        stats_row.addWidget(_s("Mistakes", str(result.mistakes), "#FBBF24"))
+        stats_row.addWidget(_s("Mistakes", str(result.mistakes), "#FB923C"))
         stats_row.addWidget(_vd())
-        stats_row.addWidget(_s("Inaccuracies", str(result.inaccuracies), "#60A5FA"))
+        stats_row.addWidget(_s("Inaccuracies", str(result.inaccuracies), "#FBBF24"))
         stats_row.addWidget(_vd())
-        total_moves = len(result.player_annotations(self.player_color))
         best = sum(
             1 for a in result.player_annotations(self.player_color)
             if a.classification in ("best", "good")
         )
-        stats_row.addWidget(_s("Best/Good", str(best), "#34D399"))
+        stats_row.addWidget(_s("Best/Good", str(best), "#10B981"))
         layout.addLayout(stats_row)
 
         return card
 
     def _build_move_card(self, ann: MoveAnnotation, muted: bool = False) -> QFrame:
-        fg, bg = _CLASSIF_COLORS.get(ann.classification, ("#475569", "#F1F5F9"))
-        if muted:
-            bg = "#F8FAFC"
-            fg = "#94A3B8"
-
+        fg, bg = _CLASSIF_COLORS.get(ann.classification, ("#D97706", "rgba(217, 119, 6, 0.15)"))
         card = QFrame()
+        card_border = "#D97706" if not muted else "rgba(217, 119, 6, 0.4)"
         card.setStyleSheet(
             f"""
             QFrame {{
-                background-color: {bg};
-                border-radius: 10px;
-                border: 1px solid {fg}30;
+                background-color: #2A1B12;
+                border-radius: 12px;
+                border: 1.5px solid {card_border};
             }}
             """
         )
         row = QHBoxLayout(card)
-        row.setContentsMargins(14, 10, 14, 10)
+        row.setContentsMargins(16, 12, 16, 12)
         row.setSpacing(14)
 
-        # Move number badge
+        # Move number
         num_lbl = QLabel(f"{ann.move_number}.")
-        num_lbl.setFixedWidth(30)
-        num_lbl.setStyleSheet("font-size: 12px; color: #94A3B8; font-weight: 600;")
+        num_lbl.setFixedWidth(32)
+        num_lbl.setStyleSheet("font-size: 13px; color: #D97706; font-weight: 700;")
         row.addWidget(num_lbl)
 
         # SAN move played
         san_lbl = QLabel(ann.san)
-        san_lbl.setFixedWidth(60)
+        san_lbl.setFixedWidth(64)
         san_lbl.setStyleSheet(
-            f"font-size: 15px; font-weight: 800; color: {fg};"
+            "font-size: 15px; font-weight: 800; color: #FDFBF7;"
             "font-family: Menlo, Monaco, 'Courier New', monospace;"
         )
         row.addWidget(san_lbl)
@@ -440,23 +524,25 @@ class AnalysisDialog(QDialog):
         badge = QLabel(ann.classification.capitalize())
         badge.setStyleSheet(
             f"font-size: 11px; font-weight: 700; color: {fg};"
-            f"background-color: {fg}18; border: 1px solid {fg}40;"
-            "border-radius: 6px; padding: 2px 8px;"
+            f"background-color: {bg}; border: 1.5px solid {fg};"
+            "border-radius: 6px; padding: 3px 8px;"
         )
         row.addWidget(badge)
 
         # Comment
         comment_lbl = QLabel(ann.comment)
         comment_lbl.setWordWrap(True)
-        comment_lbl.setStyleSheet("font-size: 12px; color: #475569;")
+        comment_lbl.setStyleSheet("font-size: 13px; color: #FDFBF7; font-weight: 500;")
         row.addWidget(comment_lbl, 1)
 
         # Best move suggestion (if different from played)
         if ann.best_uci and ann.best_uci != ann.uci and not muted:
-            best_lbl = QLabel(f"→ {ann.best_san}")
+            best_lbl = QLabel(f"Better: {ann.best_san}")
             best_lbl.setStyleSheet(
-                "font-size: 12px; font-weight: 700; color: #059669;"
+                "font-size: 12px; font-weight: 800; color: #10B981;"
                 "font-family: Menlo, Monaco, 'Courier New', monospace;"
+                "background-color: rgba(16, 185, 129, 0.15); border: 1px solid #10B981;"
+                "border-radius: 6px; padding: 2px 8px;"
             )
             row.addWidget(best_lbl)
 

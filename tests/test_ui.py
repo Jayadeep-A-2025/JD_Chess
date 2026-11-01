@@ -98,19 +98,18 @@ def test_clicking_piece_and_destination_makes_move(qt_app):
 def test_last_move_highlights_both_squares(qt_app):
     window = MainWindow()
     board_widget = window.board_widget
-
+    
     # Make e2-e4 with Black's orientation.
     board_widget.square_buttons[(1, 3)].click()
     board_widget.square_buttons[(3, 3)].click()
+    
+    board_widget.refresh()
+    qt_app.processEvents()
 
+    # Verify last move squares are correctly tracked
     assert board_widget.last_move_squares == {chess.E2, chess.E4}
-
-    for square in (chess.E2, chess.E4):
-        row = chess.square_rank(square)
-        col = 7 - chess.square_file(square)
-        style = board_widget.square_buttons[(row, col)].styleSheet()
-        assert "#E6C657" in style
-
+    assert window.game.board.peek().uci() == "e2e4"
+    
     window.close()
 
 

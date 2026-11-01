@@ -260,6 +260,99 @@ def test_analysis_dialog_renders_without_crashing(qt_app):
     dialog.close()
 
 
+def test_analysis_service_illegal_move_validation():
+    # e2e4 then e7e5 then e2e4 (illegal since e2 pawn already on e4)
+    moves = ["e2e4", "e7e5", "e2e4"]
+    result = analyze_game(uci_moves=moves, engine_path=None, player_color="White")
+    assert isinstance(result, AnalysisResult)
+    assert result.is_complete is False
+    assert result.error is not None
+    assert "Illegal move" in result.error
+    assert len(result.annotations) == 2
+
+
+def test_analysis_service_invalid_syntax_move():
+    moves = ["e2e4", "not_a_move"]
+    result = analyze_game(uci_moves=moves, engine_path=None, player_color="White")
+    assert isinstance(result, AnalysisResult)
+    assert result.is_complete is False
+    assert result.error is not None
+    assert "Invalid move syntax" in result.error
+    assert len(result.annotations) == 1
+
+
+def test_analysis_score_perspective_consistently_white():
+    from app.services.analysis_service import _cp_to_white
+    import chess.engine
+
+    # PovScore for White ahead +150 cp
+    score_white_adv = chess.engine.PovScore(chess.engine.Cp(150), chess.WHITE)
+    assert _cp_to_white(score_white_adv) == 150
+
+    # PovScore for Black ahead +150 cp (White perspective must be -150)
+    score_black_adv = chess.engine.PovScore(chess.engine.Cp(150), chess.BLACK)
+    assert _cp_to_white(score_black_adv) == -150
+
+    # Mate scores
+    mate_white = chess.engine.PovScore(chess.engine.Mate(2), chess.WHITE)
+    assert _cp_to_white(mate_white) == 30_000
+
+    mate_black = chess.engine.PovScore(chess.engine.Mate(2), chess.BLACK)
+    assert _cp_to_white(mate_black) == -30_000
+
+
+def test_analysis_worker_signal_name_and_execution(qt_app):
+    from app.ui.analysis_dialog import AnalysisWorker
+
+    worker = AnalysisWorker(
+        uci_moves=["e2e4", "e7e5"],
+        engine_path=None,
+        player_color="White",
+    )
+    assert hasattr(worker, "analysis_completed")
+    # Verify finished is NOT shadowed as a custom result signal
+    # QThread.finished is a built-in parameterless signal
+    completed_results = []
+    worker.analysis_completed.connect(lambda res: completed_results.append(res))
+    worker.start()
+    assert worker.wait(3000)
+    qt_app.processEvents()
+    assert len(completed_results) == 1
+    assert isinstance(completed_results[0], AnalysisResult)
+
+
+def test_close_engine_safe_and_non_blocking(qt_app):
+    from app.ui.main_window import MainWindow
+
+    window = MainWindow()
+    window.close_engine()
+    assert window.engine is None
+    assert window._computer_worker is None
+    window.close()
+
+
+def test_theme_and_checkbox_dropdown_styling():
+    from app.ui.styles import app_global_theme, checkbox_style, combo_style
+
+    theme = app_global_theme()
+    assert "#1E130B" in theme
+    assert "#2A1B12" in theme
+    assert "#D97706" in theme
+    assert "#FDFBF7" in theme
+    assert "QCheckBox" in theme
+    assert "QComboBox" in theme
+
+    cb_css = checkbox_style()
+    assert "color: #FDFBF7" in cb_css
+    assert "font-weight: 600" in cb_css
+    assert "indicator" in cb_css
+
+    combo_css = combo_style()
+    assert "background-color: #2A1B12" in combo_css
+    assert "border: 1.5px solid #D97706" in combo_css
+    assert "down-arrow" in combo_css
+
+
 # =====================================================================
 # 6. GameOverDialog Tests
 # =====================================================================

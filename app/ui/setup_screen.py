@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-"""Window 2: Game Setup & Configuration."""
+"""Window 2: Game Setup & Configuration.
+Styled in Royal Gold & Luxury Mahogany theme.
+"""
 
 from pathlib import Path
 
@@ -19,7 +21,7 @@ from PySide6.QtWidgets import (
     QStyleFactory,
 )
 
-from app.ui.styles import checkbox_style, combo_style
+from app.ui.styles import PRIMARY_BTN, SECONDARY_BTN, checkbox_style, combo_style
 
 
 class SetupScreen(QWidget):
@@ -33,7 +35,7 @@ class SetupScreen(QWidget):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setStyleSheet("QWidget { background-color: #F8FAFC; }")
+        self.setStyleSheet("QWidget { background-color: #1E130B; color: #FDFBF7; }")
 
         outer_layout = QVBoxLayout(self)
         outer_layout.setContentsMargins(0, 0, 0, 0)
@@ -43,10 +45,10 @@ class SetupScreen(QWidget):
         self._scroll = QScrollArea(self)
         self._scroll.setWidgetResizable(True)
         self._scroll.setFrameShape(QFrame.Shape.NoFrame)
-        self._scroll.setStyleSheet("QScrollArea { border: none; background-color: #F8FAFC; }")
+        self._scroll.setStyleSheet("QScrollArea { border: none; background-color: #1E130B; }")
 
         self._scroll_content = QWidget()
-        self._scroll_content.setStyleSheet("background-color: #F8FAFC;")
+        self._scroll_content.setStyleSheet("background-color: #1E130B;")
         main_layout = QVBoxLayout(self._scroll_content)
         main_layout.setContentsMargins(20, 20, 20, 30)
         main_layout.setSpacing(20)
@@ -56,20 +58,7 @@ class SetupScreen(QWidget):
         self.back_button = QPushButton("← Back to Menu")
         self.back_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.back_button.setMinimumHeight(44)
-        self.back_button.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #FFFFFF;
-                color: #334155;
-                border: 1.5px solid #CBD5E1;
-                border-radius: 8px;
-                padding: 10px 18px;
-                font-size: 13px;
-                font-weight: 700;
-            }
-            QPushButton:hover { background-color: #F1F5F9; color: #0F172A; border-color: #94A3B8; }
-            """
-        )
+        self.back_button.setStyleSheet(SECONDARY_BTN)
         self.back_button.clicked.connect(self.back_to_menu_clicked.emit)
         top_bar.addWidget(self.back_button)
         top_bar.addStretch(1)
@@ -82,15 +71,15 @@ class SetupScreen(QWidget):
         center_layout.setContentsMargins(0, 0, 0, 0)
         center_layout.setSpacing(20)
 
-        # SETUP CARD
+        # SETUP CARD - Luxury Mahogany & Royal Gold
         setup_card = QFrame()
         setup_card.setObjectName("setupCard")
         setup_card.setStyleSheet(
             """
             QFrame#setupCard {
-                background-color: #FFFFFF;
-                border: 1.5px solid #E2E8F0;
-                border-radius: 16px;
+                background-color: #2A1B12;
+                border: 1.5px solid #D97706;
+                border-radius: 18px;
             }
             """
         )
@@ -100,22 +89,19 @@ class SetupScreen(QWidget):
 
         # Card Title
         card_title = QLabel("Game Configuration")
-        card_title.setStyleSheet("font-size: 22px; font-weight: 800; color: #0F172A;")
+        card_title.setStyleSheet("font-size: 22px; font-weight: 800; color: #FDFBF7;")
         card_layout.addWidget(card_title)
 
         card_desc = QLabel("Set your opponent mode, board orientation, and computer difficulty level.")
-        card_desc.setStyleSheet("font-size: 13px; color: #64748B; margin-bottom: 6px;")
+        card_desc.setStyleSheet("font-size: 13px; color: #D97706; margin-bottom: 6px; font-weight: 500;")
         card_desc.setWordWrap(True)
         card_layout.addWidget(card_desc)
 
-        
         style_sheet = combo_style()
 
         # 1. Mode Selection
         mode_label = QLabel("Game Mode")
-        mode_label.setStyleSheet(
-            "font-size: 13px; font-weight: 700; color: #1E293B;"
-        )
+        mode_label.setStyleSheet("font-size: 13px; font-weight: 700; color: #FDFBF7;")
         card_layout.addWidget(mode_label)
 
         self.mode_combo = QComboBox()
@@ -128,9 +114,7 @@ class SetupScreen(QWidget):
 
         # 2. Side / Perspective Selection
         self.color_label = QLabel("Play As (Perspective)")
-        self.color_label.setStyleSheet(
-            "font-size: 13px; font-weight: 700; color: #1E293B;"
-        )
+        self.color_label.setStyleSheet("font-size: 13px; font-weight: 700; color: #FDFBF7;")
         card_layout.addWidget(self.color_label)
 
         self.color_combo = QComboBox()
@@ -143,28 +127,25 @@ class SetupScreen(QWidget):
 
         # 3. Computer Difficulty
         self.difficulty_label = QLabel("Computer Difficulty")
-        self.difficulty_label.setStyleSheet(
-            "font-size: 13px; font-weight: 700; color: #1E293B;"
-        )
+        self.difficulty_label.setStyleSheet("font-size: 13px; font-weight: 700; color: #FDFBF7;")
         card_layout.addWidget(self.difficulty_label)
 
         self.difficulty_combo = QComboBox()
         self.difficulty_combo.setStyle(QStyleFactory.create("Fusion"))
         self.difficulty_combo.setObjectName("difficultyCombo")
-        self.difficulty_combo.addItems(["Easy", "Medium", "Hard"])
-        self.difficulty_combo.setCurrentText("Medium")
+        self.difficulty_combo.addItems(["Novice", "Easy", "Medium", "Hard"])
+        self.difficulty_combo.setCurrentText("Novice")
         self.difficulty_combo.setStyleSheet(style_sheet)
         card_layout.addWidget(self.difficulty_combo)
 
-
         self.difficulty_hint = QLabel("(Select 'Play vs Computer' to activate difficulty)")
         self.difficulty_hint.setWordWrap(True)
-        self.difficulty_hint.setStyleSheet("font-size: 11px; color: #64748B;")
+        self.difficulty_hint.setStyleSheet("font-size: 11px; color: #D97706; font-weight: 500;")
         card_layout.addWidget(self.difficulty_hint)
 
         # 4. Preferences & Toggles
         pref_label = QLabel("Match Preferences")
-        pref_label.setStyleSheet("font-size: 13px; font-weight: 700; color: #1E293B; margin-top: 4px;")
+        pref_label.setStyleSheet("font-size: 13px; font-weight: 700; color: #FDFBF7; margin-top: 4px;")
         card_layout.addWidget(pref_label)
 
         cb_style = checkbox_style()
@@ -183,7 +164,7 @@ class SetupScreen(QWidget):
         # Divider
         divider = QFrame()
         divider.setFrameShape(QFrame.Shape.HLine)
-        divider.setStyleSheet("color: #E2E8F0; margin: 6px 0;")
+        divider.setStyleSheet("color: rgba(217, 119, 6, 0.35); margin: 6px 0;")
         card_layout.addWidget(divider)
 
         # Start Game CTA
@@ -191,21 +172,7 @@ class SetupScreen(QWidget):
         self.start_game_button.setObjectName("setupStartGameBtn")
         self.start_game_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.start_game_button.setMinimumHeight(48)
-        self.start_game_button.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #2563EB;
-                color: #FFFFFF;
-                border: none;
-                border-radius: 10px;
-                padding: 12px 24px;
-                font-size: 15px;
-                font-weight: 700;
-            }
-            QPushButton:hover { background-color: #1D4ED8; }
-            QPushButton:pressed { background-color: #1E40AF; }
-            """
-        )
+        self.start_game_button.setStyleSheet(PRIMARY_BTN)
         self.start_game_button.clicked.connect(self.start_game_clicked.emit)
         card_layout.addWidget(self.start_game_button)
 
@@ -227,22 +194,22 @@ class SetupScreen(QWidget):
         if is_comp:
             self.color_label.setText("Play As (Your Side)")
             self.difficulty_label.setStyleSheet(
-                "font-size: 13px; font-weight: 700; color: #1E293B;"
+                "font-size: 13px; font-weight: 700; color: #FDFBF7;"
             )
             self.difficulty_hint.setText(
                 "Skill: Easy (Skill 1) • Medium (Skill 8) • Hard (Skill 20)"
             )
             self.difficulty_hint.setStyleSheet(
-                "font-size: 11px; color: #0284C7; font-weight: 500;"
+                "font-size: 11px; color: #D97706; font-weight: 600;"
             )
         else:
             self.color_label.setText("Play As (Perspective)")
             self.difficulty_label.setStyleSheet(
-                "font-size: 13px; font-weight: 700; color: #94A3B8;"
+                "font-size: 13px; font-weight: 700; color: rgba(253, 251, 247, 0.4);"
             )
             self.difficulty_hint.setText(
                 "(Select 'Play vs Computer' to activate difficulty)"
             )
             self.difficulty_hint.setStyleSheet(
-                "font-size: 11px; color: #64748B;"
+                "font-size: 11px; color: rgba(217, 119, 6, 0.5);"
             )

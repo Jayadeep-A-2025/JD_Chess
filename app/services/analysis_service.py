@@ -48,22 +48,31 @@ class AnalysisResult:
     inaccuracies: int = 0
     accuracy_score: int = 0     # 0-100
     grade: str = "N/A"          # A+ … F
+    is_complete: bool = True
+    error: str | None = None
 
     def player_annotations(self, player_color: str) -> list[MoveAnnotation]:
         return [a for a in self.annotations if a.color == player_color]
 
 
-def _cp_to_white(score: chess.engine.Score, turn: chess.Color) -> int | None:
-    """Return centipawn score from White's perspective, or None if mate."""
-    if score.is_mate():
-        mate_n = score.mate()
+def _cp_to_white(
+    score: chess.engine.Score | chess.engine.PovScore | None,
+    turn: chess.Color | None = None,
+) -> int | None:
+    """Return centipawn score strictly from White's perspective, or ±30,000 if mate.
+    
+    Positive values favor White, negative values favor Black.
+    Turn argument is accepted for backward compatibility but perspective is consistently White.
+    """
+    if score is None:
+        return None
+    white_score = score.white() if hasattr(score, "white") else score
+    if white_score.is_mate():
+        mate_n = white_score.mate()
         if mate_n is None:
             return None
         return 30_000 if mate_n > 0 else -30_000
-    cp = score.score()
-    if cp is None:
-        return None
-    return cp if turn == chess.WHITE else -cp
+    return white_score.score()
 
 
 def _classify(cp_loss: int) -> str:
@@ -124,76 +133,88 @@ def _heuristic_analyze_game(
     board = chess.Board()
     annotations: list[MoveAnnotation] = []
 
-    for ply, uci_str in enumerate(uci_moves):
-        move_number = ply // 2 + 1
-        color = "White" if board.turn == chess.WHITE else "Black"
-        score_before_cp = _heuristic_eval_white(board)
+    try:
+        for ply, uci_str in enumerate(uci_moves):
+            move_number = ply // 2 + 1
+            color = "White" if board.turn == chess.WHITE else "Black"
+            score_before_cp = _heuristic_eval_white(board)
 
-        best_move = None
-        best_eval = -999999 if board.turn == chess.WHITE else 999999
+            try:
+                move = chess.Move.from_uci(uci_str)
+            except Exception as exc:
+                result.is_complete = False
+                result.error = f"Invalid move syntax '{uci_str}' at ply {ply + 1}: {exc}"
+                break
 
-        for candidate in board.legal_moves:
-            board.push(candidate)
-            cand_score = _heuristic_eval_white(board)
-            board.pop()
-            if board.turn == chess.WHITE:
-                if cand_score > best_eval:
-                    best_eval = cand_score
-                    best_move = candidate
-            else:
-                if cand_score < best_eval:
-                    best_eval = cand_score
-                    best_move = candidate
+            if move not in board.legal_moves:
+                result.is_complete = False
+                result.error = f"Illegal move '{uci_str}' encountered at ply {ply + 1} ({color})."
+                break
 
-        best_uci = best_move.uci() if best_move else uci_str
-        try:
-            best_san = board.san(best_move) if best_move else uci_str
-        except Exception:
-            best_san = best_uci
+            best_move = None
+            best_eval = -999999 if board.turn == chess.WHITE else 999999
 
-        try:
-            move = chess.Move.from_uci(uci_str)
+            for candidate in board.legal_moves:
+                board.push(candidate)
+                cand_score = _heuristic_eval_white(board)
+                board.pop()
+                if board.turn == chess.WHITE:
+                    if cand_score > best_eval:
+                        best_eval = cand_score
+                        best_move = candidate
+                else:
+                    if cand_score < best_eval:
+                        best_eval = cand_score
+                        best_move = candidate
+
+            best_uci = best_move.uci() if best_move else uci_str
+            try:
+                best_san = board.san(best_move) if best_move else uci_str
+            except Exception:
+                best_san = best_uci
+
             san = board.san(move)
             board.push(move)
-        except Exception:
-            san = uci_str
 
-        score_after_cp = _heuristic_eval_white(board)
+            score_after_cp = _heuristic_eval_white(board)
 
-        if color == "White":
-            cp_loss = max(0, score_before_cp - score_after_cp)
-        else:
-            cp_loss = max(0, score_after_cp - score_before_cp)
+            if color == "White":
+                cp_loss = max(0, score_before_cp - score_after_cp)
+            else:
+                cp_loss = max(0, score_after_cp - score_before_cp)
 
-        classification = _classify(cp_loss)
+            classification = _classify(cp_loss)
 
-        if classification == "blunder":
-            comment = f"Blunder! Material loss or tactical oversight. Better: {best_san}."
-        elif classification == "mistake":
-            comment = f"Mistake. Weakened position. Consider: {best_san}."
-        elif classification == "inaccuracy":
-            comment = f"Inaccuracy. {best_san} maintained stronger control."
-        elif classification == "best":
-            comment = "Best move! Excellent precision. ✓"
-        else:
-            comment = f"Solid move. {best_san} was also reasonable."
+            if classification == "blunder":
+                comment = f"Blunder! Material loss or tactical oversight. Better: {best_san}."
+            elif classification == "mistake":
+                comment = f"Mistake. Weakened position. Consider: {best_san}."
+            elif classification == "inaccuracy":
+                comment = f"Inaccuracy. {best_san} maintained stronger control."
+            elif classification == "best":
+                comment = "Best move! Excellent precision. ✓"
+            else:
+                comment = f"Solid move. {best_san} was also reasonable."
 
-        annotations.append(
-            MoveAnnotation(
-                ply=ply,
-                move_number=move_number,
-                color=color,
-                san=san,
-                uci=uci_str,
-                score_before_cp=score_before_cp,
-                score_after_cp=score_after_cp,
-                best_uci=best_uci,
-                best_san=best_san,
-                cp_loss=cp_loss,
-                classification=classification,
-                comment=comment,
+            annotations.append(
+                MoveAnnotation(
+                    ply=ply,
+                    move_number=move_number,
+                    color=color,
+                    san=san,
+                    uci=uci_str,
+                    score_before_cp=score_before_cp,
+                    score_after_cp=score_after_cp,
+                    best_uci=best_uci,
+                    best_san=best_san,
+                    cp_loss=cp_loss,
+                    classification=classification,
+                    comment=comment,
+                )
             )
-        )
+    except Exception as exc:
+        result.is_complete = False
+        result.error = f"Heuristic analysis error: {exc}"
 
     result.annotations = annotations
     _compute_summary(result, player_color)
@@ -236,8 +257,10 @@ def analyze_game(
 
     try:
         engine = chess.engine.SimpleEngine.popen_uci(engine_path)
-    except Exception:
-        return _heuristic_analyze_game(uci_moves, player_color)
+    except Exception as exc:
+        fallback = _heuristic_analyze_game(uci_moves, player_color)
+        fallback.error = f"Engine unavailable ({exc}); fell back to heuristic analysis."
+        return fallback
 
     board = chess.Board()
     annotations: list[MoveAnnotation] = []
@@ -247,15 +270,24 @@ def analyze_game(
             move_number = ply // 2 + 1
             color = "White" if board.turn == chess.WHITE else "Black"
 
+            try:
+                move = chess.Move.from_uci(uci_str)
+            except Exception as exc:
+                result.is_complete = False
+                result.error = f"Invalid move syntax '{uci_str}' at ply {ply + 1}: {exc}"
+                break
+
+            if move not in board.legal_moves:
+                result.is_complete = False
+                result.error = f"Illegal move '{uci_str}' encountered at ply {ply + 1} ({color})."
+                break
+
             info_before = engine.analyse(
                 board,
                 chess.engine.Limit(depth=depth, time=time_limit),
             )
             score_before_raw = info_before.get("score")
-            score_before_cp = (
-                _cp_to_white(score_before_raw.white(), board.turn)
-                if score_before_raw else None
-            )
+            score_before_cp = _cp_to_white(score_before_raw)
 
             best_move = info_before.get("pv", [None])[0]
             if best_move:
@@ -268,7 +300,6 @@ def analyze_game(
                 best_uci = ""
                 best_san = ""
 
-            move = chess.Move.from_uci(uci_str)
             try:
                 san = board.san(move)
             except Exception:
@@ -280,10 +311,7 @@ def analyze_game(
                 chess.engine.Limit(depth=depth, time=time_limit),
             )
             score_after_raw = info_after.get("score")
-            score_after_cp = (
-                _cp_to_white(score_after_raw.white(), board.turn)
-                if score_after_raw else None
-            )
+            score_after_cp = _cp_to_white(score_after_raw)
 
             if score_before_cp is not None and score_after_cp is not None:
                 if color == "White":
@@ -329,8 +357,9 @@ def analyze_game(
                 )
             )
 
-    except Exception:
-        pass
+    except Exception as exc:
+        result.is_complete = False
+        result.error = f"Engine analysis error: {exc}"
     finally:
         try:
             engine.quit()

@@ -63,12 +63,19 @@ jobs:
           chmod +x assets/stockfish
           test -f assets/stockfish
 
+      - name: Run test validation
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          python -m pytest
+
       - name: Build Windows executable
         if: runner.os == 'Windows'
         shell: powershell
         run: |
           pyinstaller --noconsole --onefile --clean `
             --add-data "assets/icons;assets/icons" `
+            --add-data "assets/sounds;assets/sounds" `
             --add-binary "assets/stockfish.exe;assets" `
             --name JD_Chess main.py
 
@@ -78,6 +85,7 @@ jobs:
         run: |
           pyinstaller --windowed --clean \
             --add-data "assets/icons:assets/icons" \
+            --add-data "assets/sounds:assets/sounds" \
             --add-binary "assets/stockfish:assets" \
             --name JD_Chess main.py
 

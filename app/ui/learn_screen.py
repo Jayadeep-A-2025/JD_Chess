@@ -50,7 +50,7 @@ class LearnScreen(QWidget):
         self.is_lesson_solved: bool = False
         self._is_narrow_layout = False
 
-        self.setStyleSheet("QWidget { background-color: #F8FAFC; }")
+        self.setStyleSheet("QWidget { background-color: #1E130B; color: #FDFBF7; }")
 
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
@@ -60,11 +60,11 @@ class LearnScreen(QWidget):
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setFrameShape(QFrame.Shape.NoFrame)
-        self.scroll_area.setStyleSheet("QScrollArea { background: transparent; border: none; }")
-        self.scroll_area.viewport().setStyleSheet("background: transparent;")
+        self.scroll_area.setStyleSheet("QScrollArea { background-color: #1E130B; border: none; }")
+        self.scroll_area.viewport().setStyleSheet("background-color: #1E130B;")
 
         self.scroll_content = QWidget()
-        self.scroll_content.setStyleSheet("background: transparent;")
+        self.scroll_content.setStyleSheet("background-color: #1E130B;")
         main_vbox = QVBoxLayout(self.scroll_content)
         main_vbox.setContentsMargins(14, 14, 14, 16)
         main_vbox.setSpacing(12)
@@ -78,33 +78,20 @@ class LearnScreen(QWidget):
         self.back_button = QPushButton("← Main Menu")
         self.back_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.back_button.setMinimumHeight(40)
-        self.back_button.setStyleSheet(
-            """
-            QPushButton {
-                background-color: transparent;
-                color: #334155;
-                border: 1.5px solid #CBD5E1;
-                border-radius: 8px;
-                padding: 6px 14px;
-                font-size: 13px;
-                font-weight: 700;
-            }
-            QPushButton:hover { background-color: #F1F5F9; color: #0F172A; }
-            """
-        )
+        self.back_button.setStyleSheet(SECONDARY_BTN)
         self.back_button.clicked.connect(self.main_menu_clicked.emit)
         top_bar.addWidget(self.back_button)
 
         title_lbl = QLabel("Learn Chess with CM")
         title_lbl.setStyleSheet(
-            "font-size: 16px; font-weight: 800; color: #0F172A; letter-spacing: 0.3px;"
+            "font-size: 16px; font-weight: 800; color: #FDFBF7; letter-spacing: 0.3px;"
         )
         top_bar.addWidget(title_lbl)
 
         self.cm_status_pill = QLabel("🤖 CM: Online")
         self.cm_status_pill.setStyleSheet(
-            "font-size: 12px; font-weight: 700; color: #1D4ED8; "
-            "background-color: #EFF6FF; border: 1px solid #BFDBFE; "
+            "font-size: 12px; font-weight: 700; color: #10B981; "
+            "background-color: #2A1B12; border: 1.5px solid #D97706; "
             "border-radius: 12px; padding: 4px 12px;"
         )
         top_bar.addWidget(self.cm_status_pill)
@@ -113,8 +100,8 @@ class LearnScreen(QWidget):
 
         self.progress_pill = QLabel()
         self.progress_pill.setStyleSheet(
-            "font-size: 12px; font-weight: 700; color: #065F46; "
-            "background-color: #D1FAE5; border: 1px solid #A7F3D0; "
+            "font-size: 12px; font-weight: 700; color: #FDFBF7; "
+            "background-color: #2A1B12; border: 1.5px solid #D97706; "
             "border-radius: 12px; padding: 4px 12px;"
         )
         top_bar.addWidget(self.progress_pill)
@@ -193,19 +180,19 @@ class LearnScreen(QWidget):
         # Grandmaster Educational Theory Note
         self.note_card = QFrame()
         self.note_card.setStyleSheet(
-            "QFrame { background-color: #FFFFFF; border: 1.5px solid #CBD5E1; border-radius: 12px; }"
+            "QFrame { background-color: #2A1B12; border: 1.5px solid #D97706; border-radius: 14px; }"
         )
         note_layout = QVBoxLayout(self.note_card)
         note_layout.setContentsMargins(16, 12, 16, 12)
         note_layout.setSpacing(4)
 
         self.note_header = QLabel("📖 Grandmaster Insight")
-        self.note_header.setStyleSheet("font-size: 13px; font-weight: 800; color: #1E293B;")
+        self.note_header.setStyleSheet("font-size: 13px; font-weight: 800; color: #D97706;")
         note_layout.addWidget(self.note_header)
 
         self.note_text = QLabel()
         self.note_text.setWordWrap(True)
-        self.note_text.setStyleSheet("font-size: 12px; color: #334155; line-height: 1.4; font-weight: 500;")
+        self.note_text.setStyleSheet("font-size: 12px; color: #E6CCB2; line-height: 1.4; font-weight: 500;")
         note_layout.addWidget(self.note_text)
 
         self.left_col_layout.addWidget(self.note_card)
@@ -266,10 +253,9 @@ class LearnScreen(QWidget):
         card.setStyleSheet(
             """
             QFrame#cmSpeechCard {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #0F172A, stop:1 #1E293B);
-                border: 1.5px solid #334155;
-                border-radius: 14px;
+                background-color: #2A1B12;
+                border: 1.5px solid #D97706;
+                border-radius: 16px;
             }
             """
         )
@@ -282,8 +268,8 @@ class LearnScreen(QWidget):
         avatar.setFixedSize(48, 48)
         avatar.setAlignment(Qt.AlignmentFlag.AlignCenter)
         avatar.setStyleSheet(
-            "font-size: 26px; background-color: #2563EB; "
-            "border: 2px solid #60A5FA; border-radius: 24px;"
+            "font-size: 26px; background-color: #352317; "
+            "border: 2px solid #D97706; border-radius: 24px;"
         )
         layout.addWidget(avatar, 0, Qt.AlignmentFlag.AlignTop)
 
@@ -293,13 +279,13 @@ class LearnScreen(QWidget):
 
         top_row = QHBoxLayout()
         self.cm_name_lbl = QLabel("CM (Chess Mate) • AI Companion")
-        self.cm_name_lbl.setStyleSheet("font-size: 13px; font-weight: 800; color: #60A5FA;")
+        self.cm_name_lbl.setStyleSheet("font-size: 13px; font-weight: 800; color: #D97706;")
         top_row.addWidget(self.cm_name_lbl)
 
         self.lesson_badge = QLabel("Lesson 1")
         self.lesson_badge.setStyleSheet(
-            "font-size: 11px; font-weight: 700; color: #94A3B8; "
-            "background-color: rgba(255,255,255,0.08); border-radius: 6px; padding: 2px 8px;"
+            "font-size: 11px; font-weight: 700; color: #FDFBF7; "
+            "background-color: #352317; border: 1px solid #D97706; border-radius: 6px; padding: 2px 8px;"
         )
         top_row.addWidget(self.lesson_badge)
         top_row.addStretch(1)
@@ -307,13 +293,13 @@ class LearnScreen(QWidget):
 
         self.cm_dialogue_lbl = QLabel()
         self.cm_dialogue_lbl.setWordWrap(True)
-        self.cm_dialogue_lbl.setStyleSheet("font-size: 13px; color: #F1F5F9; line-height: 1.4;")
+        self.cm_dialogue_lbl.setStyleSheet("font-size: 13px; color: #FDFBF7; line-height: 1.4;")
         text_col.addWidget(self.cm_dialogue_lbl)
 
         self.cm_objective_lbl = QLabel()
         self.cm_objective_lbl.setWordWrap(True)
         self.cm_objective_lbl.setStyleSheet(
-            "font-size: 12px; font-weight: 700; color: #34D399; margin-top: 4px;"
+            "font-size: 12px; font-weight: 700; color: #F59E0B; margin-top: 4px;"
         )
         text_col.addWidget(self.cm_objective_lbl)
 
@@ -323,7 +309,7 @@ class LearnScreen(QWidget):
     def _build_curriculum_sidebar(self) -> QFrame:
         sidebar = QFrame()
         sidebar.setStyleSheet(
-            "QFrame { background-color: #FFFFFF; border: 1.5px solid #CBD5E1; border-radius: 14px; }"
+            "QFrame { background-color: #2A1B12; border: 1.5px solid #D97706; border-radius: 16px; }"
         )
         layout = QVBoxLayout(sidebar)
         layout.setContentsMargins(14, 14, 14, 14)
@@ -331,7 +317,7 @@ class LearnScreen(QWidget):
 
         # Header
         sb_title = QLabel("Course Curriculum")
-        sb_title.setStyleSheet("font-size: 15px; font-weight: 800; color: #0F172A;")
+        sb_title.setStyleSheet("font-size: 15px; font-weight: 800; color: #FDFBF7;")
         layout.addWidget(sb_title)
 
         # Progress bar
@@ -342,9 +328,9 @@ class LearnScreen(QWidget):
         self.progress_bar.setStyleSheet(
             """
             QProgressBar {
-                background-color: #F1F5F9;
+                background-color: #1E130B;
                 border-radius: 4px;
-                border: none;
+                border: 1px solid rgba(217, 119, 6, 0.4);
             }
             QProgressBar::chunk {
                 background-color: #10B981;
@@ -374,7 +360,7 @@ class LearnScreen(QWidget):
                 current_cat = lesson.category
                 cat_lbl = QLabel(current_cat)
                 cat_lbl.setStyleSheet(
-                    "font-size: 11px; font-weight: 800; color: #64748B; "
+                    "font-size: 11px; font-weight: 800; color: #D97706; "
                     "text-transform: uppercase; letter-spacing: 0.5px; margin-top: 8px; margin-bottom: 2px;"
                 )
                 self.lesson_list_layout.addWidget(cat_lbl)
@@ -506,9 +492,9 @@ class LearnScreen(QWidget):
                 btn.setStyleSheet(
                     """
                     QPushButton {
-                        background-color: #EFF6FF;
-                        color: #1D4ED8;
-                        border: 2px solid #3B82F6;
+                        background-color: #352317;
+                        color: #D97706;
+                        border: 2px solid #D97706;
                         border-radius: 8px;
                         padding: 8px 12px;
                         font-size: 12px;
@@ -522,9 +508,9 @@ class LearnScreen(QWidget):
                 btn.setStyleSheet(
                     """
                     QPushButton {
-                        background-color: #F0FDF4;
-                        color: #15803D;
-                        border: 1.5px solid #86EFAC;
+                        background-color: #2A1B12;
+                        color: #10B981;
+                        border: 1.5px solid #10B981;
                         border-radius: 8px;
                         padding: 8px 12px;
                         font-size: 12px;
@@ -532,16 +518,16 @@ class LearnScreen(QWidget):
                         text-align: left;
                         min-height: 40px;
                     }
-                    QPushButton:hover { background-color: #DCFCE7; }
+                    QPushButton:hover { background-color: #352317; }
                     """
                 )
             else:
                 btn.setStyleSheet(
                     """
                     QPushButton {
-                        background-color: #FFFFFF;
-                        color: #334155;
-                        border: 1.5px solid #CBD5E1;
+                        background-color: #2A1B12;
+                        color: #FDFBF7;
+                        border: 1.5px solid rgba(217, 119, 6, 0.35);
                         border-radius: 8px;
                         padding: 8px 12px;
                         font-size: 12px;
@@ -549,6 +535,6 @@ class LearnScreen(QWidget):
                         text-align: left;
                         min-height: 40px;
                     }
-                    QPushButton:hover { background-color: #F8FAFC; border-color: #94A3B8; }
+                    QPushButton:hover { background-color: #352317; border-color: #D97706; }
                     """
                 )

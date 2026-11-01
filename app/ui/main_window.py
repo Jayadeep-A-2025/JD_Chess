@@ -20,7 +20,6 @@ from app.engine.stockfish_engine import ComputerEngine, StockfishEngine
 from app.services.history_manager import HistoryManager, MatchRecord
 from app.services.save_manager import SaveManager, SaveSlot
 from app.services.user_profile_manager import UserProfileManager
-from app.services.sound_manager import SoundManager
 from app.ui.analysis_dialog import AnalysisDialog
 from app.ui.chessboard_widget import (
     ChessBoardWidget,
@@ -258,12 +257,6 @@ class MainWindow(QMainWindow):
         profile.sound_enabled = enabled
         self.profile_manager.save_profile(profile)
 
-    def _on_sound_preference_changed(self, enabled: bool) -> None:
-        self.sound_manager.set_enabled(enabled)
-        profile = self.profile_manager.get_profile()
-        profile.sound_enabled = enabled
-        self.profile_manager.save_profile(profile)
-
     def start_game_from_setup(self) -> None:
         """User clicked 'Start Game' on Window 2."""
         mode = self.setup_screen.mode_combo.currentText()
@@ -468,20 +461,53 @@ class MainWindow(QMainWindow):
         self.start_new_game()
 
     def close_engine(self) -> None:
+        """Safely and non-blockingly shut down the chess engine to prevent UI freezes."""
         self.cancel_pending_computer_move()
 
         worker = self._computer_worker
-        if worker is not None and worker.isRunning():
-            worker.wait()
-
         self._computer_worker = None
+        engine = self.engine
+        self.engine = None
 
-        if self.engine is not None:
+        if worker is not None:
             try:
-                self.engine.close()
+                worker.move_ready.disconnect()
             except Exception:
                 pass
-            self.engine = None
+            try:
+                worker.error_occurred.disconnect()
+            except Exception:
+                pass
+
+            if worker.isRunning():
+                if getattr(self, "_shutting_down", False):
+                    # During window close, wait briefly so Qt doesn't abort on destroyed thread
+                    worker.wait(300)
+                    if engine is not None:
+                        try:
+                            engine.close()
+                        except Exception:
+                            pass
+                else:
+                    # Non-blocking shutdown: close engine once the in-flight search finishes
+                    def _cleanup_after_worker(eng=engine):
+                        if eng is not None:
+                            try:
+                                eng.close()
+                            except Exception:
+                                pass
+
+                    try:
+                        worker.finished.connect(_cleanup_after_worker)
+                    except Exception:
+                        pass
+                return
+
+        if engine is not None:
+            try:
+                engine.close()
+            except Exception:
+                pass
 
     def start_new_game(self) -> None:
         self.cancel_pending_computer_move()

@@ -8,7 +8,7 @@ from app.engine.stockfish_engine import ComputerEngine, StockfishEngine
 def test_difficulty_settings_are_available():
     settings = ComputerEngine.DIFFICULTY_SETTINGS
 
-    assert set(settings) == {"Easy", "Medium", "Hard"}
+    assert set(settings) == {"Novice","Easy", "Medium", "Hard"}
     assert settings["Easy"]["skill"] < settings["Medium"]["skill"]
     assert settings["Medium"]["skill"] < settings["Hard"]["skill"]
     assert StockfishEngine.DIFFICULTY_SETTINGS == ComputerEngine.DIFFICULTY_SETTINGS

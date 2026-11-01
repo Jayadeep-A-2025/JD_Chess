@@ -14,10 +14,11 @@ class ComputerEngine:
     """Manage a Computer chess engine process and request computer moves."""
 
     DIFFICULTY_SETTINGS = {
-        "Easy": {"time": 0.15, "skill": 1},
-        "Medium": {"time": 0.50, "skill": 8},
-        "Hard": {"time": 1.20, "skill": 20},
-    }
+    "Novice": {"time": 0.05, "skill": 0},
+    "Easy": {"time": 0.15, "skill": 3},
+    "Medium": {"time": 0.50, "skill": 8},
+    "Hard": {"time": 1.20, "skill": 20},
+}
 
     def __init__(self, engine_path: str | None = None) -> None:
         self.engine_path = engine_path or self.find_engine()
@@ -104,6 +105,7 @@ class ComputerEngine:
         engine = getattr(self, "engine", None)
         if engine is None or board.is_game_over():
             return None
+
         settings = self.DIFFICULTY_SETTINGS.get(
             difficulty, self.DIFFICULTY_SETTINGS["Medium"]
         )
@@ -111,11 +113,18 @@ class ComputerEngine:
         if "Skill Level" in engine.options:
             engine.configure({"Skill Level": settings["skill"]})
 
+        # If it's Easy mode, introduce a chance to make a random amateur move (e.g., 35% of the time)
+        if difficulty == "Easy":
+            import random
+            legal_moves = list(board.legal_moves)
+            # 35% chance to play a completely random move, simulating a beginner blunder
+            if legal_moves and random.random() < 0.35:
+                return random.choice(legal_moves).uci()
+
         result = engine.play(
             board,
             chess.engine.Limit(time=settings["time"]),
         )
-
         return result.move.uci() if result.move else None
 
     def close(self) -> None:

@@ -32,7 +32,7 @@ class HistoryScreen(QWidget):
     ) -> None:
         super().__init__(parent)
         self.history_manager = history_manager
-        self.setStyleSheet("QWidget { background-color: #F8FAFC; }")
+        self.setStyleSheet("QWidget { background-color: #1E130B; color: #FDFBF7; }")
 
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
@@ -40,34 +40,23 @@ class HistoryScreen(QWidget):
 
         # --- Top bar ---
         top_bar = QFrame()
-        top_bar.setStyleSheet("QFrame { background-color: #0F172A; border: none; }")
+        top_bar.setStyleSheet(
+            "QFrame { background-color: #1E130B; border-bottom: 1.5px solid #D97706; }"
+        )
         top_bar.setFixedHeight(64)
         tb_layout = QHBoxLayout(top_bar)
         tb_layout.setContentsMargins(24, 0, 24, 0)
 
         back_btn = QPushButton("← Back to Menu")
         back_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        back_btn.setMinimumHeight(40)
-        back_btn.setStyleSheet(
-            """
-            QPushButton {
-                background-color: transparent;
-                color: #94A3B8;
-                border: 1.5px solid #334155;
-                border-radius: 8px;
-                padding: 8px 16px;
-                font-size: 13px;
-                font-weight: 600;
-            }
-            QPushButton:hover { background-color: #1E293B; color: #F1F5F9; border-color: #64748B; }
-            """
-        )
+        back_btn.setMinimumHeight(42)
+        back_btn.setStyleSheet(SECONDARY_BTN)
         back_btn.clicked.connect(self.back_clicked.emit)
         tb_layout.addWidget(back_btn)
 
         title_lbl = QLabel("Match History & Player Rating")
         title_lbl.setStyleSheet(
-            "font-size: 17px; font-weight: 800; color: #F1F5F9; letter-spacing: 0.3px;"
+            "font-size: 17px; font-weight: 800; color: #FDFBF7; letter-spacing: 0.3px;"
         )
         tb_layout.addWidget(title_lbl, 1, Qt.AlignmentFlag.AlignCenter)
 
@@ -132,18 +121,18 @@ class HistoryScreen(QWidget):
             empty_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
             empty_lbl.setWordWrap(True)
             empty_lbl.setStyleSheet(
-                "font-size: 14px; color: #94A3B8; margin-top: 40px; font-weight: 500;"
+                "font-size: 14px; color: #E6CCB2; margin-top: 40px; font-weight: 500;"
             )
             self._inner_layout.addWidget(empty_lbl)
         elif not filtered_matches:
             no_match_lbl = QLabel("No games match the selected filters.")
             no_match_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            no_match_lbl.setStyleSheet("font-size: 13px; color: #94A3B8; margin-top: 20px;")
+            no_match_lbl.setStyleSheet("font-size: 13px; color: #E6CCB2; margin-top: 20px;")
             self._inner_layout.addWidget(no_match_lbl)
         else:
             hist_header = QLabel(f"Past Games Log ({len(filtered_matches)} displayed)")
             hist_header.setStyleSheet(
-                "font-size: 14px; font-weight: 800; color: #0F172A; letter-spacing: 0.2px;"
+                "font-size: 14px; font-weight: 800; color: #D97706; letter-spacing: 0.2px;"
             )
             self._inner_layout.addWidget(hist_header)
             for record in filtered_matches:
@@ -155,14 +144,14 @@ class HistoryScreen(QWidget):
         """Bar with modern styled dropdowns to filter matches across modes and outcomes."""
         bar = QFrame()
         bar.setStyleSheet(
-            "QFrame { background-color: #FFFFFF; border: 1.5px solid #E2E8F0; border-radius: 12px; }"
+            "QFrame { background-color: #2A1B12; border: 1.5px solid #D97706; border-radius: 14px; }"
         )
         layout = QHBoxLayout(bar)
         layout.setContentsMargins(16, 10, 16, 10)
         layout.setSpacing(14)
 
         lbl = QLabel("Filter Games:")
-        lbl.setStyleSheet("font-size: 13px; font-weight: 700; color: #1E293B;")
+        lbl.setStyleSheet("font-size: 13px; font-weight: 700; color: #FDFBF7;")
         layout.addWidget(lbl)
 
         style = combo_style()
@@ -222,10 +211,9 @@ class HistoryScreen(QWidget):
         card.setStyleSheet(
             """
             QFrame {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #0F172A, stop:1 #1E3A5F);
+                background-color: #2A1B12;
+                border: 1.5px solid #D97706;
                 border-radius: 16px;
-                border: none;
             }
             """
         )
@@ -236,7 +224,7 @@ class HistoryScreen(QWidget):
         header_row = QHBoxLayout()
 
         title = QLabel("⭐  Your Rating & Skill Level")
-        title.setStyleSheet("font-size: 15px; font-weight: 700; color: #CBD5E1;")
+        title.setStyleSheet("font-size: 15px; font-weight: 700; color: #D97706;")
         header_row.addWidget(title)
         header_row.addStretch(1)
         layout.addLayout(header_row)
@@ -244,7 +232,7 @@ class HistoryScreen(QWidget):
         # Big rating number
         rating_lbl = QLabel(str(rating))
         rating_lbl.setStyleSheet(
-            "font-size: 54px; font-weight: 900; color: #FFFFFF; letter-spacing: -2px;"
+            "font-size: 54px; font-weight: 900; color: #FDFBF7; letter-spacing: -2px;"
         )
         layout.addWidget(rating_lbl)
 
@@ -267,7 +255,7 @@ class HistoryScreen(QWidget):
             vl.setStyleSheet(f"font-size: 22px; font-weight: 900; color: {color};")
             ll = QLabel(label)
             ll.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            ll.setStyleSheet("font-size: 11px; color: #64748B; font-weight: 500;")
+            ll.setStyleSheet("font-size: 11px; color: #D97706; font-weight: 600;")
             v.addWidget(vl)
             v.addWidget(ll)
             return w
@@ -275,16 +263,16 @@ class HistoryScreen(QWidget):
         def _vd() -> QFrame:
             f = QFrame()
             f.setFrameShape(QFrame.Shape.VLine)
-            f.setStyleSheet("color: rgba(255,255,255,0.1); min-width: 1px; max-width: 1px;")
+            f.setStyleSheet("color: rgba(217, 119, 6, 0.3); min-width: 1px; max-width: 1px;")
             return f
 
-        stats_row.addWidget(_s("Wins", str(wins), "#34D399"))
+        stats_row.addWidget(_s("Wins", str(wins), "#10B981"))
         stats_row.addWidget(_vd())
-        stats_row.addWidget(_s("Losses", str(losses), "#F87171"))
+        stats_row.addWidget(_s("Losses", str(losses), "#EF4444"))
         stats_row.addWidget(_vd())
-        stats_row.addWidget(_s("Draws", str(draws), "#FBBF24"))
+        stats_row.addWidget(_s("Draws", str(draws), "#F59E0B"))
         stats_row.addWidget(_vd())
-        stats_row.addWidget(_s("Total Games", str(total), "#93C5FD"))
+        stats_row.addWidget(_s("Total Games", str(total), "#FDFBF7"))
         layout.addLayout(stats_row)
 
         # Win-rate progress bar
@@ -292,7 +280,7 @@ class HistoryScreen(QWidget):
             win_pct = int(wins / total * 100)
             bar_row = QHBoxLayout()
             bar_lbl = QLabel(f"Win Rate  {win_pct}%")
-            bar_lbl.setStyleSheet("font-size: 12px; color: #94A3B8; font-weight: 600;")
+            bar_lbl.setStyleSheet("font-size: 12px; color: #FDFBF7; font-weight: 600;")
             bar_row.addWidget(bar_lbl)
             bar_row.addStretch(1)
             layout.addLayout(bar_row)
@@ -305,12 +293,12 @@ class HistoryScreen(QWidget):
             bar.setStyleSheet(
                 """
                 QProgressBar {
-                    background-color: rgba(255,255,255,0.10);
+                    background-color: #1E130B;
+                    border: 1px solid rgba(217, 119, 6, 0.4);
                     border-radius: 4px;
-                    border: none;
                 }
                 QProgressBar::chunk {
-                    background-color: #34D399;
+                    background-color: #10B981;
                     border-radius: 4px;
                 }
                 """
@@ -321,24 +309,24 @@ class HistoryScreen(QWidget):
 
     def _build_match_card(self, record: MatchRecord) -> QFrame:
         result_colors = {
-            "win":  ("#059669", "#D1FAE5", "W"),
-            "loss": ("#DC2626", "#FEE2E2", "L"),
-            "draw": ("#D97706", "#FEF3C7", "D"),
+            "win":  ("#10B981", "#1E3A2B", "W"),
+            "loss": ("#EF4444", "#3A1E1E", "L"),
+            "draw": ("#F59E0B", "#3A2E1E", "D"),
         }
-        fg, bg, letter = result_colors.get(record.result, ("#475569", "#F1F5F9", "?"))
+        fg, bg, letter = result_colors.get(record.result, ("#D97706", "#2A1B12", "?"))
 
         card = QFrame()
         card.setStyleSheet(
-            f"""
-            QFrame {{
-                background-color: #FFFFFF;
-                border: 1.5px solid #E2E8F0;
-                border-radius: 12px;
-            }}
-            QFrame:hover {{
-                border-color: #CBD5E1;
-                background-color: #FAFBFC;
-            }}
+            """
+            QFrame {
+                background-color: #2A1B12;
+                border: 1.5px solid #D97706;
+                border-radius: 14px;
+            }
+            QFrame:hover {
+                border-color: #F59E0B;
+                background-color: #352317;
+            }
             """
         )
         row = QHBoxLayout(card)
@@ -351,7 +339,7 @@ class HistoryScreen(QWidget):
         badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
         badge.setStyleSheet(
             f"font-size: 16px; font-weight: 900; color: {fg};"
-            f"background-color: {bg}; border-radius: 10px;"
+            f"background-color: {bg}; border: 1px solid {fg}; border-radius: 10px;"
         )
         row.addWidget(badge)
 
@@ -369,11 +357,11 @@ class HistoryScreen(QWidget):
         if record.game_mode == "Play vs Computer":
             mode_str = f"vs Computer ({record.difficulty})"
         sub_lbl = QLabel(f"{mode_str}  ·  {record.move_count} moves  ·  Playing as {record.player_color}")
-        sub_lbl.setStyleSheet("font-size: 12px; color: #64748B;")
+        sub_lbl.setStyleSheet("font-size: 12px; color: #FDFBF7;")
         details.addWidget(sub_lbl)
 
         date_lbl = QLabel(record.played_at_formatted)
-        date_lbl.setStyleSheet("font-size: 11px; color: #94A3B8;")
+        date_lbl.setStyleSheet("font-size: 11px; color: #E6CCB2;")
         details.addWidget(date_lbl)
 
         row.addLayout(details, 1)
@@ -385,7 +373,7 @@ class HistoryScreen(QWidget):
 
         delta = record.rating_change
         sign = "+" if delta >= 0 else ""
-        delta_color = "#059669" if delta >= 0 else "#DC2626"
+        delta_color = "#10B981" if delta >= 0 else "#EF4444"
         delta_lbl = QLabel(f"{sign}{delta} pts")
         delta_lbl.setAlignment(Qt.AlignmentFlag.AlignRight)
         delta_lbl.setStyleSheet(
@@ -395,13 +383,13 @@ class HistoryScreen(QWidget):
 
         rating_lbl = QLabel(f"→ {record.rating_after}")
         rating_lbl.setAlignment(Qt.AlignmentFlag.AlignRight)
-        rating_lbl.setStyleSheet("font-size: 11px; color: #94A3B8;")
+        rating_lbl.setStyleSheet("font-size: 11px; color: #E6CCB2;")
         right.addWidget(rating_lbl)
 
         if record.accuracy_score > 0:
             acc_lbl = QLabel(f"Acc {record.accuracy_score}%")
             acc_lbl.setAlignment(Qt.AlignmentFlag.AlignRight)
-            acc_lbl.setStyleSheet("font-size: 11px; color: #0284C7; font-weight: 600;")
+            acc_lbl.setStyleSheet("font-size: 11px; color: #F59E0B; font-weight: 600;")
             right.addWidget(acc_lbl)
 
         row.addLayout(right)

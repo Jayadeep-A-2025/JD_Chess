@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-"""Window 3: Chess Board Game Screen with touch-friendly controls and responsive mobile/desktop layout."""
+"""Window 3: Chess Board Game Screen with touch-friendly controls and responsive mobile/desktop layout.
+Styled in Royal Gold & Luxury Mahogany theme.
+"""
 
 import chess
 from PySide6.QtCore import Qt, Signal
@@ -37,7 +39,7 @@ class GameScreen(QWidget):
         self.difficulty = "Medium"
         self._is_narrow_layout = False
 
-        self.setStyleSheet("QWidget { background-color: #F8FAFC; }")
+        self.setStyleSheet("QWidget { background-color: #1E130B; color: #FDFBF7; }")
 
         main_vbox = QVBoxLayout(self)
         main_vbox.setContentsMargins(14, 12, 14, 12)
@@ -51,50 +53,24 @@ class GameScreen(QWidget):
 
         self.menu_button = QPushButton("← Main Menu")
         self.menu_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.menu_button.setMinimumHeight(40)
-        self.menu_button.setStyleSheet(
-            """
-            QPushButton {
-                background-color: transparent;
-                color: #334155;
-                border: 1.5px solid #CBD5E1;
-                border-radius: 8px;
-                padding: 6px 14px;
-                font-size: 13px;
-                font-weight: 700;
-            }
-            QPushButton:hover { background-color: #F1F5F9; color: #0F172A; }
-            """
-        )
+        self.menu_button.setMinimumHeight(42)
+        self.menu_button.setStyleSheet(SECONDARY_BTN)
         self.menu_button.clicked.connect(self.main_menu_clicked.emit)
         top_bar.addWidget(self.menu_button)
 
         self.match_pill = QLabel("Match in Progress")
         self.match_pill.setWordWrap(True)
         self.match_pill.setStyleSheet(
-            "font-size: 12px; font-weight: 700; color: #1E293B; "
-            "background-color: #EFF6FF; border: 1px solid #BFDBFE; "
-            "border-radius: 12px; padding: 4px 12px;"
+            "font-size: 13px; font-weight: 700; color: #FDFBF7; "
+            "background-color: #2A1B12; border: 1.5px solid #D97706; "
+            "border-radius: 12px; padding: 6px 14px;"
         )
         top_bar.addWidget(self.match_pill, 1)
 
         self.save_button = QPushButton("💾 Save Game")
         self.save_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.save_button.setMinimumHeight(40)
-        self.save_button.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #10B981;
-                color: #FFFFFF;
-                border: none;
-                border-radius: 8px;
-                padding: 6px 16px;
-                font-size: 13px;
-                font-weight: 700;
-            }
-            QPushButton:hover { background-color: #059669; }
-            """
-        )
+        self.save_button.setMinimumHeight(42)
+        self.save_button.setStyleSheet(PRIMARY_BTN)
         self.save_button.clicked.connect(self.save_game_clicked.emit)
         top_bar.addWidget(self.save_button)
 
@@ -106,11 +82,11 @@ class GameScreen(QWidget):
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setFrameShape(QFrame.Shape.NoFrame)
-        self.scroll_area.setStyleSheet("QScrollArea { background: transparent; border: none; }")
-        self.scroll_area.viewport().setStyleSheet("background: transparent;")
+        self.scroll_area.setStyleSheet("QScrollArea { background-color: #1E130B; border: none; }")
+        self.scroll_area.viewport().setStyleSheet("background-color: #1E130B;")
 
         self.content_container = QWidget()
-        self.content_container.setStyleSheet("background: transparent;")
+        self.content_container.setStyleSheet("background-color: #1E130B;")
         self.content_layout = QHBoxLayout(self.content_container)
         self.content_layout.setContentsMargins(0, 4, 0, 4)
         self.content_layout.setSpacing(16)
@@ -147,7 +123,7 @@ class GameScreen(QWidget):
         # Header Title
         title_lbl = QLabel("MATCH CONTROLS")
         title_lbl.setStyleSheet(
-            "font-size: 11px; font-weight: 800; color: #64748B; letter-spacing: 0.5px;"
+            "font-size: 11px; font-weight: 800; color: #D97706; letter-spacing: 0.8px;"
         )
         self.sidebar_layout.addWidget(title_lbl)
 
@@ -156,23 +132,23 @@ class GameScreen(QWidget):
         status_card.setStyleSheet(
             """
             QFrame {
-                background-color: #FFFFFF;
-                border: 1.5px solid #CBD5E1;
-                border-radius: 12px;
+                background-color: #2A1B12;
+                border: 1.5px solid #D97706;
+                border-radius: 16px;
             }
             """
         )
         status_layout = QVBoxLayout(status_card)
-        status_layout.setContentsMargins(14, 12, 14, 12)
+        status_layout.setContentsMargins(16, 14, 16, 14)
         status_layout.setSpacing(6)
 
         self.turn_label = QLabel()
-        self.turn_label.setStyleSheet("font-size: 16px; font-weight: 800; color: #0F172A;")
+        self.turn_label.setStyleSheet("font-size: 17px; font-weight: 800; color: #FDFBF7;")
         status_layout.addWidget(self.turn_label)
 
         self.status_label = QLabel()
         self.status_label.setWordWrap(True)
-        self.status_label.setStyleSheet("font-size: 13px; color: #334155; line-height: 1.4; font-weight: 500;")
+        self.status_label.setStyleSheet("font-size: 13px; color: #E6CCB2; line-height: 1.4; font-weight: 500;")
         status_layout.addWidget(self.status_label)
 
         self.sidebar_layout.addWidget(status_card)
@@ -201,22 +177,7 @@ class GameScreen(QWidget):
         self.analyze_button.setObjectName("gameScreenAnalyzeBtn")
         self.analyze_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.analyze_button.setMinimumHeight(44)
-        self.analyze_button.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #F8FAFC;
-                color: #1D4ED8;
-                border: 1.5px solid #93C5FD;
-                border-radius: 10px;
-                padding: 8px 14px;
-                font-size: 13px;
-                font-weight: 700;
-                min-height: 44px;
-            }
-            QPushButton:hover { background-color: #EFF6FF; border-color: #2563EB; }
-            QPushButton:pressed { background-color: #DBEAFE; }
-            """
-        )
+        self.analyze_button.setStyleSheet(SECONDARY_BTN)
         self.analyze_button.clicked.connect(self.analyze_game_clicked.emit)
         self.sidebar_layout.addWidget(self.analyze_button)
 
@@ -225,27 +186,27 @@ class GameScreen(QWidget):
         history_card.setStyleSheet(
             """
             QFrame {
-                background-color: #FFFFFF;
-                border: 1.5px solid #CBD5E1;
-                border-radius: 12px;
+                background-color: #2A1B12;
+                border: 1.5px solid #D97706;
+                border-radius: 16px;
             }
             """
         )
         history_layout = QVBoxLayout(history_card)
-        history_layout.setContentsMargins(14, 12, 14, 12)
+        history_layout.setContentsMargins(16, 14, 16, 14)
         history_layout.setSpacing(8)
 
         history_title = QLabel("MOVE HISTORY")
         history_title.setStyleSheet(
-            "font-size: 11px; font-weight: 800; color: #64748B; letter-spacing: 0.5px;"
+            "font-size: 11px; font-weight: 800; color: #D97706; letter-spacing: 0.8px;"
         )
         history_layout.addWidget(history_title)
 
         self.history_scroll = QScrollArea()
         self.history_scroll.setFrameShape(QFrame.Shape.NoFrame)
         self.history_scroll.setWidgetResizable(True)
-        self.history_scroll.setStyleSheet("QScrollArea { background: transparent; border: none; }")
-        self.history_scroll.viewport().setStyleSheet("background: transparent;")
+        self.history_scroll.setStyleSheet("QScrollArea { background-color: transparent; border: none; }")
+        self.history_scroll.viewport().setStyleSheet("background-color: transparent;")
 
         self.moves_label = QLabel("No moves yet")
         self.moves_label.setWordWrap(True)
@@ -253,9 +214,9 @@ class GameScreen(QWidget):
         self.moves_label.setStyleSheet(
             """
             QLabel {
-                background-color: #F8FAFC;
-                color: #1E293B;
-                border: 1px solid #E2E8F0;
+                background-color: #1E130B;
+                color: #FDFBF7;
+                border: 1px solid rgba(217, 119, 6, 0.4);
                 border-radius: 8px;
                 padding: 10px;
                 font-size: 13px;
@@ -324,9 +285,9 @@ class GameScreen(QWidget):
         frame.setStyleSheet(
             """
             QFrame {
-                background-color: #FFFFFF;
-                border: 1.5px solid #CBD5E1;
-                border-radius: 10px;
+                background-color: #2A1B12;
+                border: 1.5px solid #D97706;
+                border-radius: 14px;
             }
             """
         )
@@ -336,7 +297,7 @@ class GameScreen(QWidget):
 
         # Player Icon & Name
         name_lbl = QLabel(f"Player ({position})")
-        name_lbl.setStyleSheet("font-size: 13px; font-weight: 700; color: #0F172A;")
+        name_lbl.setStyleSheet("font-size: 14px; font-weight: 800; color: #FDFBF7;")
         layout.addWidget(name_lbl)
 
         # Turn indicator chip
@@ -350,12 +311,12 @@ class GameScreen(QWidget):
 
         # Captured pieces label
         captures_title = QLabel("Captures:")
-        captures_title.setStyleSheet("font-size: 11px; font-weight: 700; color: #64748B;")
+        captures_title.setStyleSheet("font-size: 11px; font-weight: 700; color: #D97706;")
         layout.addWidget(captures_title)
 
         captures_lbl = QLabel("")
         captures_lbl.setStyleSheet(
-            "font-size: 18px; color: #1E293B; font-weight: 600; letter-spacing: 2px;"
+            "font-size: 18px; color: #FDFBF7; font-weight: 600; letter-spacing: 2px;"
         )
         layout.addWidget(captures_lbl)
 
@@ -399,7 +360,6 @@ class GameScreen(QWidget):
             top_color = "Black"
             bottom_color = "White"
 
-            # White captures Black pieces -> white_caps belongs to White (bottom)
             top_captured = black_str
             bottom_captured = white_str
         else:
@@ -423,8 +383,8 @@ class GameScreen(QWidget):
 
         # Update Active Turn Chip
         active_chip_style = (
-            "font-size: 11px; font-weight: 700; color: #047857; "
-            "background-color: #D1FAE5; border: 1px solid #A7F3D0; "
+            "font-size: 11px; font-weight: 700; color: #10B981; "
+            "background-color: rgba(16, 185, 129, 0.15); border: 1.5px solid #10B981; "
             "border-radius: 6px; padding: 2px 8px;"
         )
 
