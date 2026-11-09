@@ -214,10 +214,11 @@ class AnalysisDialog(QDialog):
                 sig.disconnect()
             except Exception:
                 pass
-        # Only disconnect QThread.finished if the thread was ever started.
+        # Only disconnect QThread.finished if a receiver is connected.
         if worker.isRunning() or worker.isFinished():
             try:
-                worker.finished.disconnect()
+                if worker.receivers("finished()") > 0:
+                    worker.finished.disconnect()
             except Exception:
                 pass
 

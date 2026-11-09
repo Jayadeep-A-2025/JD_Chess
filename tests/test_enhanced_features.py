@@ -605,3 +605,132 @@ def test_main_window_minimum_mobile_size(qt_app):
         assert window.minimumWidth() <= 360
         assert window.minimumHeight() <= 480
         window.close()
+
+
+# =====================================================================
+# 11. Expanded 36-Lesson Curriculum & Interactive Learning Tests
+# =====================================================================
+
+def test_expanded_curriculum_and_new_categories():
+    lessons = get_curriculum()
+    assert len(lessons) == 36
+
+    categories = {l.category for l in lessons}
+    expected_categories = {
+        "Chess Fundamentals",
+        "Opening Principles",
+        "Tactical Skills",
+        "Tactical Combinations",
+        "Defensive Skills",
+        "Endgames",
+        "Advanced Beginner",
+        "Beginner Basics",
+        "Intermediate Tactics",
+        "Pro Strategies",
+    }
+    for expected in expected_categories:
+        assert expected in categories, f"Expected category {expected} missing"
+
+    # Every lesson has a legal guided move and non-empty metadata
+    for l in lessons:
+        assert l.id
+        assert l.title
+        assert l.fen
+        assert l.expected_moves
+        assert l.guided_move
+        assert l.educational_note
+        assert l.hints
+        assert l.theory_detail
+
+
+def test_learn_screen_progressive_hints(qt_app):
+    with tempfile.TemporaryDirectory() as tmpdir:
+        profile_path = Path(tmpdir) / "profile.json"
+        pm = UserProfileManager(profile_path)
+        pm.set_username("Judit")
+
+        screen = LearnScreen(profile_manager=pm)
+        lesson = get_lesson_by_id("curr_piece_moves")
+        assert lesson is not None
+        screen.load_lesson(lesson)
+
+        # Hint Tier 1
+        screen._show_hint()
+        assert "Hint (1/3" in screen.cm_dialogue_lbl.text()
+        assert "Judit" in screen.cm_dialogue_lbl.text()
+
+        # Hint Tier 2
+        screen._show_hint()
+        assert "Hint (2/3" in screen.cm_dialogue_lbl.text()
+
+        # Hint Tier 3
+        screen._show_hint()
+        assert "Hint (3/3" in screen.cm_dialogue_lbl.text()
+
+        screen.close()
+
+
+def test_learn_screen_guided_demonstration(qt_app):
+    with tempfile.TemporaryDirectory() as tmpdir:
+        profile_path = Path(tmpdir) / "profile.json"
+        pm = UserProfileManager(profile_path)
+        pm.set_username("Tal")
+
+        screen = LearnScreen(profile_manager=pm)
+        lesson = get_lesson_by_id("curr_center_control")
+        assert lesson is not None
+        screen.load_lesson(lesson)
+
+        # Board starts with pawn on d2
+        assert screen.game.board.piece_at(chess.D2) is not None
+
+        # Execute demonstration
+        screen._demonstrate_move()
+
+        # Pawn is now at d4 after demo
+        assert screen.game.board.piece_at(chess.D4) is not None
+        assert "Demonstration" in screen.cm_dialogue_lbl.text()
+        assert "Tal" in screen.cm_dialogue_lbl.text()
+
+        screen.close()
+
+
+def test_learn_screen_mode_switching(qt_app):
+    with tempfile.TemporaryDirectory() as tmpdir:
+        profile_path = Path(tmpdir) / "profile.json"
+        pm = UserProfileManager(profile_path)
+        pm.set_username("Capablanca")
+
+        screen = LearnScreen(profile_manager=pm)
+        lesson = get_lesson_by_id("curr_center_control")
+        assert lesson is not None
+        screen.load_lesson(lesson)
+
+        # Switch to theory mode
+        screen._set_learning_mode("theory")
+        assert screen._current_mode == "theory"
+        assert not screen.theory_deep_dive_lbl.isHidden()
+        assert "Concept & Theory Study" in screen.cm_dialogue_lbl.text()
+
+        # Switch to demo mode
+        screen._set_learning_mode("demo")
+        assert screen._current_mode == "demo"
+        assert "Demonstration" in screen.cm_dialogue_lbl.text()
+
+        # Switch back to challenge mode
+        screen._set_learning_mode("challenge")
+        assert screen._current_mode == "challenge"
+        assert screen.theory_deep_dive_lbl.isHidden()
+
+        screen.close()
+
+
+def test_home_screen_reflects_36_lessons(qt_app):
+    with tempfile.TemporaryDirectory() as tmpdir:
+        sm = SaveManager(Path(tmpdir) / "saves.json")
+        pm = UserProfileManager(Path(tmpdir) / "profile.json")
+        hm = HistoryManager(Path(tmpdir) / "history.json")
+
+        hs = HomeScreen(save_manager=sm, profile_manager=pm, history_manager=hm)
+        assert "/ 36 Mastered" in hs.learn_badge.text()
+        hs.close()

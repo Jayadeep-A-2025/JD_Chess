@@ -1,4 +1,9 @@
 from __future__ import annotations
+
+"""Post-game game over dialog.
+Styled in Warm Beige & Walnut theme: clean, elegant, minimal, and traditional.
+"""
+
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QDialog,
@@ -39,62 +44,62 @@ class GameOverDialog(QDialog):
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setMinimumWidth(300)
-        self.setMaximumWidth(480)
+        self.setMaximumWidth(460)
 
         # Dialog root layout with responsive padding
         dialog_layout = QVBoxLayout(self)
         dialog_layout.setContentsMargins(8, 8, 8, 8)
 
-        # Outer card container - Luxury Mahogany Theme
+        # Outer card container - Warm Beige & Walnut
         outer = QFrame(self)
         outer.setObjectName("gameOverOuter")
         outer.setStyleSheet(
             """
             QFrame#gameOverOuter {
-                background-color: #1E130B;
-                border: 1.5px solid #D97706;
-                border-radius: 18px;
+                background-color: #FFFFFF;
+                border: 1px solid #DCD5CA;
+                border-radius: 14px;
             }
             """
         )
         dialog_layout.addWidget(outer)
 
         main_layout = QVBoxLayout(outer)
-        main_layout.setContentsMargins(24, 28, 24, 28)
-        main_layout.setSpacing(18)
+        main_layout.setContentsMargins(24, 24, 24, 24)
+        main_layout.setSpacing(16)
 
         # --- Hero section ---
         hero_layout = QVBoxLayout()
-        hero_layout.setSpacing(8)
+        hero_layout.setSpacing(6)
         hero_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         # Big emoji / icon based on result
         icon_map = {"win": "🏆", "loss": "😔", "draw": "🤝"}
         icon_lbl = QLabel(icon_map.get(result, "♟"))
         icon_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        icon_lbl.setStyleSheet("font-size: 48px;")
+        icon_lbl.setStyleSheet("font-size: 40px;")
         hero_layout.addWidget(icon_lbl)
 
         # Title
         title_map = {
             "win":  "Congratulations!",
-            "loss": "Better Luck Next Time!",
-            "draw": "Well Played – Draw!",
+            "loss": "Game Over",
+            "draw": "Draw",
         }
         title_lbl = QLabel(title_map.get(result, "Game Over"))
         title_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title_color = {
-            "win": "#10B981", "loss": "#EF4444", "draw": "#D97706"
-        }.get(result, "#FDFBF7")
+            "win": "#3F6E4D", "loss": "#A34838", "draw": "#8A6642"
+        }.get(result, "#241B16")
         title_lbl.setStyleSheet(
-            f"font-size: 24px; font-weight: 900; color: {title_color}; letter-spacing: 0.3px;"
+            f"font-size: 22px; font-weight: 800; color: {title_color}; letter-spacing: 0.2px;"
         )
         hero_layout.addWidget(title_lbl)
 
         # Subtitle
         sub_lbl = QLabel(result_label)
         sub_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        sub_lbl.setStyleSheet("font-size: 14px; color: #E6CCB2; font-weight: 600;")
+        sub_lbl.setStyleSheet("font-size: 13px; color: #6E5D53; font-weight: 500;")
         sub_lbl.setWordWrap(True)
         hero_layout.addWidget(sub_lbl)
 
@@ -103,7 +108,7 @@ class GameOverDialog(QDialog):
         # --- Stats strip ---
         stats_frame = QFrame()
         stats_frame.setStyleSheet(
-            "QFrame { background-color: #2A1B12; border: 1.5px solid #D97706; border-radius: 14px; }"
+            "QFrame { background-color: #F7F4EE; border: 1px solid #E8E2D8; border-radius: 10px; }"
         )
         stats_layout = QHBoxLayout(stats_frame)
         stats_layout.setContentsMargins(12, 10, 12, 10)
@@ -116,10 +121,10 @@ class GameOverDialog(QDialog):
             v.setAlignment(Qt.AlignmentFlag.AlignCenter)
             val_lbl = QLabel(value)
             val_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            val_lbl.setStyleSheet("font-size: 16px; font-weight: 800; color: #FDFBF7;")
+            val_lbl.setStyleSheet("font-size: 15px; font-weight: 700; color: #241B16;")
             lbl = QLabel(label)
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            lbl.setStyleSheet("font-size: 11px; color: #D97706; font-weight: 600;")
+            lbl.setStyleSheet("font-size: 11px; color: #6E5D53; font-weight: 500;")
             v.addWidget(val_lbl)
             v.addWidget(lbl)
             return w
@@ -138,13 +143,13 @@ class GameOverDialog(QDialog):
 
         # --- Action buttons ---
         btn_layout = QVBoxLayout()
-        btn_layout.setSpacing(10)
+        btn_layout.setSpacing(8)
 
         if can_analyze:
             self.analyze_btn = QPushButton("🔍  Analyze Game & Better Moves")
             self.analyze_btn.setObjectName("analyzeBtn")
             self.analyze_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            self.analyze_btn.setMinimumHeight(44)
+            self.analyze_btn.setMinimumHeight(40)
             self.analyze_btn.setStyleSheet(PRIMARY_BTN)
             self.analyze_btn.clicked.connect(self._on_analyze)
             btn_layout.addWidget(self.analyze_btn)
@@ -152,7 +157,7 @@ class GameOverDialog(QDialog):
         self.new_game_btn = QPushButton("♟  New Game")
         self.new_game_btn.setObjectName("postGameNewGameBtn")
         self.new_game_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.new_game_btn.setMinimumHeight(44)
+        self.new_game_btn.setMinimumHeight(40)
         self.new_game_btn.setStyleSheet(SECONDARY_BTN)
         self.new_game_btn.clicked.connect(self._on_new_game)
         btn_layout.addWidget(self.new_game_btn)
@@ -176,5 +181,5 @@ class GameOverDialog(QDialog):
 def _divider_v() -> QFrame:
     f = QFrame()
     f.setFrameShape(QFrame.Shape.VLine)
-    f.setStyleSheet("color: #D97706; background-color: #D97706; min-width: 1px; max-width: 1px;")
+    f.setStyleSheet("color: #DCD5CA; background-color: #DCD5CA; min-width: 1px; max-width: 1px;")
     return f

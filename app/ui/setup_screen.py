@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 """Window 2: Game Setup & Configuration.
-Styled in Royal Gold & Luxury Mahogany theme.
+Styled in Warm Beige & Walnut theme: clean, elegant, minimal, and traditional.
 """
 
 from pathlib import Path
@@ -35,7 +35,7 @@ class SetupScreen(QWidget):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setStyleSheet("QWidget { background-color: #1E130B; color: #FDFBF7; }")
+        self.setStyleSheet("QWidget { background-color: #F7F4EE; color: #241B16; }")
 
         outer_layout = QVBoxLayout(self)
         outer_layout.setContentsMargins(0, 0, 0, 0)
@@ -45,19 +45,19 @@ class SetupScreen(QWidget):
         self._scroll = QScrollArea(self)
         self._scroll.setWidgetResizable(True)
         self._scroll.setFrameShape(QFrame.Shape.NoFrame)
-        self._scroll.setStyleSheet("QScrollArea { border: none; background-color: #1E130B; }")
+        self._scroll.setStyleSheet("QScrollArea { border: none; background-color: #F7F4EE; }")
 
         self._scroll_content = QWidget()
-        self._scroll_content.setStyleSheet("background-color: #1E130B;")
+        self._scroll_content.setStyleSheet("background-color: #F7F4EE;")
         main_layout = QVBoxLayout(self._scroll_content)
         main_layout.setContentsMargins(20, 20, 20, 30)
-        main_layout.setSpacing(20)
+        main_layout.setSpacing(18)
 
         # Top navigation bar
         top_bar = QHBoxLayout()
         self.back_button = QPushButton("← Back to Menu")
         self.back_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.back_button.setMinimumHeight(44)
+        self.back_button.setMinimumHeight(40)
         self.back_button.setStyleSheet(SECONDARY_BTN)
         self.back_button.clicked.connect(self.back_to_menu_clicked.emit)
         top_bar.addWidget(self.back_button)
@@ -66,34 +66,34 @@ class SetupScreen(QWidget):
 
         # Centered setup card container
         center_container = QWidget()
-        center_container.setMaximumWidth(540)
+        center_container.setMaximumWidth(520)
         center_layout = QVBoxLayout(center_container)
         center_layout.setContentsMargins(0, 0, 0, 0)
-        center_layout.setSpacing(20)
+        center_layout.setSpacing(16)
 
-        # SETUP CARD - Luxury Mahogany & Royal Gold
+        # SETUP CARD - Warm Beige & Walnut
         setup_card = QFrame()
         setup_card.setObjectName("setupCard")
         setup_card.setStyleSheet(
             """
             QFrame#setupCard {
-                background-color: #2A1B12;
-                border: 1.5px solid #D97706;
-                border-radius: 18px;
+                background-color: #FFFFFF;
+                border: 1px solid #DCD5CA;
+                border-radius: 12px;
             }
             """
         )
         card_layout = QVBoxLayout(setup_card)
-        card_layout.setContentsMargins(28, 28, 28, 28)
-        card_layout.setSpacing(18)
+        card_layout.setContentsMargins(26, 24, 26, 24)
+        card_layout.setSpacing(16)
 
         # Card Title
         card_title = QLabel("Game Configuration")
-        card_title.setStyleSheet("font-size: 22px; font-weight: 800; color: #FDFBF7;")
+        card_title.setStyleSheet("font-size: 20px; font-weight: 700; color: #241B16;")
         card_layout.addWidget(card_title)
 
         card_desc = QLabel("Set your opponent mode, board orientation, and computer difficulty level.")
-        card_desc.setStyleSheet("font-size: 13px; color: #D97706; margin-bottom: 6px; font-weight: 500;")
+        card_desc.setStyleSheet("font-size: 13px; color: #6E5D53; margin-bottom: 4px; font-weight: 400;")
         card_desc.setWordWrap(True)
         card_layout.addWidget(card_desc)
 
@@ -101,7 +101,7 @@ class SetupScreen(QWidget):
 
         # 1. Mode Selection
         mode_label = QLabel("Game Mode")
-        mode_label.setStyleSheet("font-size: 13px; font-weight: 700; color: #FDFBF7;")
+        mode_label.setStyleSheet("font-size: 13px; font-weight: 600; color: #241B16;")
         card_layout.addWidget(mode_label)
 
         self.mode_combo = QComboBox()
@@ -114,7 +114,7 @@ class SetupScreen(QWidget):
 
         # 2. Side / Perspective Selection
         self.color_label = QLabel("Play As (Perspective)")
-        self.color_label.setStyleSheet("font-size: 13px; font-weight: 700; color: #FDFBF7;")
+        self.color_label.setStyleSheet("font-size: 13px; font-weight: 600; color: #241B16;")
         card_layout.addWidget(self.color_label)
 
         self.color_combo = QComboBox()
@@ -127,7 +127,7 @@ class SetupScreen(QWidget):
 
         # 3. Computer Difficulty
         self.difficulty_label = QLabel("Computer Difficulty")
-        self.difficulty_label.setStyleSheet("font-size: 13px; font-weight: 700; color: #FDFBF7;")
+        self.difficulty_label.setStyleSheet("font-size: 13px; font-weight: 600; color: #241B16;")
         card_layout.addWidget(self.difficulty_label)
 
         self.difficulty_combo = QComboBox()
@@ -140,12 +140,12 @@ class SetupScreen(QWidget):
 
         self.difficulty_hint = QLabel("(Select 'Play vs Computer' to activate difficulty)")
         self.difficulty_hint.setWordWrap(True)
-        self.difficulty_hint.setStyleSheet("font-size: 11px; color: #D97706; font-weight: 500;")
+        self.difficulty_hint.setStyleSheet("font-size: 11px; color: #8A6642; font-weight: 500;")
         card_layout.addWidget(self.difficulty_hint)
 
         # 4. Preferences & Toggles
         pref_label = QLabel("Match Preferences")
-        pref_label.setStyleSheet("font-size: 13px; font-weight: 700; color: #FDFBF7; margin-top: 4px;")
+        pref_label.setStyleSheet("font-size: 13px; font-weight: 600; color: #241B16; margin-top: 4px;")
         card_layout.addWidget(pref_label)
 
         cb_style = checkbox_style()
@@ -164,14 +164,14 @@ class SetupScreen(QWidget):
         # Divider
         divider = QFrame()
         divider.setFrameShape(QFrame.Shape.HLine)
-        divider.setStyleSheet("color: rgba(217, 119, 6, 0.35); margin: 6px 0;")
+        divider.setStyleSheet("color: #E8E2D8; margin: 4px 0;")
         card_layout.addWidget(divider)
 
         # Start Game CTA
         self.start_game_button = QPushButton("Start Game →")
         self.start_game_button.setObjectName("setupStartGameBtn")
         self.start_game_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.start_game_button.setMinimumHeight(48)
+        self.start_game_button.setMinimumHeight(44)
         self.start_game_button.setStyleSheet(PRIMARY_BTN)
         self.start_game_button.clicked.connect(self.start_game_clicked.emit)
         card_layout.addWidget(self.start_game_button)
@@ -194,22 +194,22 @@ class SetupScreen(QWidget):
         if is_comp:
             self.color_label.setText("Play As (Your Side)")
             self.difficulty_label.setStyleSheet(
-                "font-size: 13px; font-weight: 700; color: #FDFBF7;"
+                "font-size: 13px; font-weight: 600; color: #241B16;"
             )
             self.difficulty_hint.setText(
                 "Skill: Easy (Skill 1) • Medium (Skill 8) • Hard (Skill 20)"
             )
             self.difficulty_hint.setStyleSheet(
-                "font-size: 11px; color: #D97706; font-weight: 600;"
+                "font-size: 11px; color: #8A6642; font-weight: 500;"
             )
         else:
             self.color_label.setText("Play As (Perspective)")
             self.difficulty_label.setStyleSheet(
-                "font-size: 13px; font-weight: 700; color: rgba(253, 251, 247, 0.4);"
+                "font-size: 13px; font-weight: 600; color: #A3907C;"
             )
             self.difficulty_hint.setText(
                 "(Select 'Play vs Computer' to activate difficulty)"
             )
             self.difficulty_hint.setStyleSheet(
-                "font-size: 11px; color: rgba(217, 119, 6, 0.5);"
+                "font-size: 11px; color: #B0A597;"
             )

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-"""Chessboard widget with coordinate labels, highlighting, and responsive sizing."""
+"""Chessboard widget with coordinate labels, highlighting, custom vector pieces, and responsive sizing."""
 
 import chess
 from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QFrame,
     QLabel,
@@ -13,6 +14,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.core.chess_game import ChessGame
+from app.ui.piece_renderer import get_piece_renderer
 
 PIECE_GLYPHS = {
     "K": "♔", "Q": "♕", "R": "♖", "B": "♗", "N": "♘", "P": "♙",
@@ -87,9 +89,9 @@ class ChessBoardWidget(QWidget):
         self.board_frame.setStyleSheet(
             """
             QFrame#boardFrame {
-                background-color: #E2E8F0;
-                border: 1px solid #CBD5E1;
-                border-radius: 8px;
+                background-color: #22160E;
+                border: 2px solid #D97706;
+                border-radius: 12px;
             }
             """
         )
@@ -99,7 +101,7 @@ class ChessBoardWidget(QWidget):
             lbl = QLabel(self.board_frame)
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
             lbl.setStyleSheet(
-                "color: #64748B; font-size: 11px; font-weight: 700;"
+                "color: #D97706; font-size: 12px; font-weight: 800;"
             )
             self.rank_labels.append(lbl)
 
@@ -108,7 +110,7 @@ class ChessBoardWidget(QWidget):
             lbl = QLabel(self.board_frame)
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
             lbl.setStyleSheet(
-                "color: #64748B; font-size: 11px; font-weight: 700;"
+                "color: #D97706; font-size: 12px; font-weight: 800;"
             )
             self.file_labels.append(lbl)
 
@@ -291,7 +293,6 @@ class ChessBoardWidget(QWidget):
         self.refresh()
 
     def refresh(self) -> None:
-        font_size = max(10, int(self.square_size * 0.58))
         last_move = (
             self.game.board.peek() if self.game.board.move_stack else None
         )
@@ -301,39 +302,69 @@ class ChessBoardWidget(QWidget):
             else set()
         )
 
+        renderer = get_piece_renderer()
+        icon_size = max(18, int(self.square_size * 0.82))
+        q_icon_size = QSize(icon_size, icon_size)
+
         for (row, col), button in self.square_buttons.items():
             square = self.visual_to_square(row, col)
             square_name = chess.square_name(square)
             piece = self.game.board.piece_at(square)
             
-            # Rich Mahogany and Warm Wood Tones
-            background = (
-                "#E6CCB2" if (row + col) % 2 == 0 else "#5C4033"
-            )
-            if square == self.selected_square:
-                background = "#D97706"  # Royal Gold selection
-            elif square_name in self.legal_destinations:
-                background = "#B45309"  # Amber-Gold highlight
-            elif square in self.last_move_squares:
-                background = "#E6C657"  # Classic Gold Last-Move Highlight
+            # Mastercrafted Light/Dark Squares with Rich Contrast
+            is_light_square = (row + col) % 2 == 0
+            base_bg = "#E8D8C4" if is_light_square else "#5C3D28"
 
-            button.setText(PIECE_GLYPHS.get(piece.symbol(), "") if piece else "")
-            
-            # High-contrast piece coloring
-            piece_color = "#FFFFFF" if piece and piece.color == chess.WHITE else "#120A05"
-            
-            # Explicitly force stylesheet with background-color and text formatting
+            is_selected = (square == self.selected_square)
+            is_dest = (square_name in self.legal_destinations)
+            is_last = (square in self.last_move_squares)
+
+            if is_selected:
+                background = "#D97706"  # Royal Gold Selection
+            elif is_last:
+                background = "#CDB580" if is_light_square else "#856238"  # Warm Move Trace
+            else:
+                background = base_bg
+
+            button.setIconSize(q_icon_size)
+
+            # Clear plain text so vector icons are cleanly centered
+            button.setText("")
+
+            # Render piece and legal move / capture markers
+            if is_dest:
+                if piece:
+                    # Capture target: render piece with vibrant red/gold capture frame
+                    button.setIcon(QIcon(renderer.get_capture_target_pixmap(piece.symbol(), icon_size)))
+                else:
+                    # Empty destination square: render smooth centered golden dot
+                    button.setIcon(QIcon(renderer.get_move_dot_pixmap(icon_size)))
+            elif piece:
+                button.setIcon(renderer.get_piece_icon(piece.symbol(), icon_size))
+            else:
+                button.setIcon(QIcon())
+
+            # Corner radius for board outer boundaries
+            corners = []
+            if row == 0 and col == 0:
+                corners.append("border-top-left-radius: 6px;")
+            elif row == 0 and col == 7:
+                corners.append("border-top-right-radius: 6px;")
+            elif row == 7 and col == 0:
+                corners.append("border-bottom-left-radius: 6px;")
+            elif row == 7 and col == 7:
+                corners.append("border-bottom-right-radius: 6px;")
+            corner_style = " ".join(corners)
+
             button.setStyleSheet(
                 f"""
                 QPushButton {{
                     background-color: {background};
-                    color: {piece_color};
                     border: none;
-                    font-size: {font_size}px;
-                    font-weight: bold;
+                    {corner_style}
                 }}
                 QPushButton:hover {{
-                    border: 2px solid #D97706;
+                    border: 2px solid #F59E0B;
                 }}
                 """
             )
