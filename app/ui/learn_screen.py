@@ -41,6 +41,65 @@ from app.ui.styles import (
 )
 
 
+_BTN_STYLE_ACTIVE = """
+QPushButton {
+    background-color: #EFEBE3;
+    color: #4A3525;
+    border: 1.5px solid #4A3525;
+    border-radius: 6px;
+    padding: 7px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: left;
+    min-height: 38px;
+}
+"""
+
+_BTN_STYLE_DONE = """
+QPushButton {
+    background-color: #FFFFFF;
+    color: #3F6E4D;
+    border: 1px solid #C8D6C7;
+    border-radius: 6px;
+    padding: 7px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    text-align: left;
+    min-height: 38px;
+}
+QPushButton:hover { background-color: #F7F4EE; }
+"""
+
+_BTN_STYLE_LOCKED = """
+QPushButton {
+    background-color: #F4F1EA;
+    color: #A0968E;
+    border: 1px dashed #DCD5CA;
+    border-radius: 6px;
+    padding: 7px 12px;
+    font-size: 12px;
+    font-weight: 400;
+    text-align: left;
+    min-height: 38px;
+}
+"""
+
+_BTN_STYLE_DEFAULT = """
+QPushButton {
+    background-color: #FFFFFF;
+    color: #241B16;
+    border: 1px solid #E8E2D8;
+    border-radius: 6px;
+    padding: 7px 12px;
+    font-size: 12px;
+    font-weight: 400;
+    text-align: left;
+    min-height: 38px;
+}
+QPushButton:hover { background-color: #F7F4EE; border-color: #8A6642; }
+"""
+
+
 class LearnScreen(QWidget):
     """Interactive learning academy guided step-by-step by companion CM."""
 
@@ -64,6 +123,7 @@ class LearnScreen(QWidget):
         self._hint_tier: int = 0
         self._current_mode: str = "challenge"  # "challenge" | "theory" | "demo" | "assessment"
         self._selected_level_filter: int = 0   # 0 = All Levels, 1..7 = Level 1..7
+        self._lesson_btn_state: dict[str, str] = {}
 
         self.setStyleSheet("QWidget { background-color: #F7F4EE; color: #241B16; }")
 
@@ -1163,7 +1223,12 @@ class LearnScreen(QWidget):
                         "border-radius: 4px; padding: 1px 6px;"
                     )
 
-        # Update lesson buttons
+        # Precompute unlocked levels once (O(1) lookups for all 42 lessons)
+        unlocked_levels = {
+            lvl: self.profile_manager.is_level_unlocked(lvl) for lvl in range(1, 8)
+        }
+
+        # Update lesson buttons with state dirty-checking
         for lesson in self.curriculum:
             btn = self.lesson_buttons.get(lesson.id)
             if not btn:
@@ -1171,79 +1236,30 @@ class LearnScreen(QWidget):
 
             is_active = (lesson.id == self.current_lesson.id)
             is_done = (lesson.id in completed)
-            is_unlocked = self.profile_manager.is_level_unlocked(lesson.level_number)
+            is_unlocked = unlocked_levels.get(lesson.level_number, True)
 
             if not is_unlocked:
-                btn.setText(f"🔒 {lesson.title}")
-            else:
-                icon = "✓ " if is_done else "• "
-                btn.setText(f"{icon}{lesson.title}")
-
-            if is_active:
-                btn.setStyleSheet(
-                    """
-                    QPushButton {
-                        background-color: #EFEBE3;
-                        color: #4A3525;
-                        border: 1.5px solid #4A3525;
-                        border-radius: 6px;
-                        padding: 7px 12px;
-                        font-size: 12px;
-                        font-weight: 700;
-                        text-align: left;
-                        min-height: 38px;
-                    }
-                    """
-                )
+                btn_state = "locked"
+                btn_text = f"🔒 {lesson.title}"
+                style = _BTN_STYLE_LOCKED
+            elif is_active:
+                btn_state = "active"
+                btn_text = f"{'✓ ' if is_done else '• '}{lesson.title}"
+                style = _BTN_STYLE_ACTIVE
             elif is_done:
-                btn.setStyleSheet(
-                    """
-                    QPushButton {
-                        background-color: #FFFFFF;
-                        color: #3F6E4D;
-                        border: 1px solid #C8D6C7;
-                        border-radius: 6px;
-                        padding: 7px 12px;
-                        font-size: 12px;
-                        font-weight: 500;
-                        text-align: left;
-                        min-height: 38px;
-                    }
-                    QPushButton:hover { background-color: #F7F4EE; }
-                    """
-                )
-            elif not is_unlocked:
-                btn.setStyleSheet(
-                    """
-                    QPushButton {
-                        background-color: #F4F1EA;
-                        color: #A0968E;
-                        border: 1px dashed #DCD5CA;
-                        border-radius: 6px;
-                        padding: 7px 12px;
-                        font-size: 12px;
-                        font-weight: 400;
-                        text-align: left;
-                        min-height: 38px;
-                    }
-                    """
-                )
+                btn_state = "done"
+                btn_text = f"✓ {lesson.title}"
+                style = _BTN_STYLE_DONE
             else:
-                btn.setStyleSheet(
-                    """
-                    QPushButton {
-                        background-color: #FFFFFF;
-                        color: #241B16;
-                        border: 1px solid #E8E2D8;
-                        border-radius: 6px;
-                        padding: 7px 12px;
-                        font-size: 12px;
-                        font-weight: 400;
-                        text-align: left;
-                        min-height: 38px;
-                    }
-                    QPushButton:hover { background-color: #F7F4EE; border-color: #8A6642; }
-                    """
-                )
+                btn_state = "default"
+                btn_text = f"• {lesson.title}"
+                style = _BTN_STYLE_DEFAULT
+
+            if btn.text() != btn_text:
+                btn.setText(btn_text)
+
+            if self._lesson_btn_state.get(lesson.id) != btn_state:
+                btn.setStyleSheet(style)
+                self._lesson_btn_state[lesson.id] = btn_state
 
         self._update_sidebar_visibility()

@@ -156,6 +156,7 @@ class PieceRenderer:
         self._renderers: dict[str, QSvgRenderer] = {}
         self._pixmap_cache: dict[tuple[str, int], QPixmap] = {}
         self._marker_cache: dict[tuple[str, int], QPixmap] = {}
+        self._icon_cache: dict[tuple[str, int], QIcon] = {}
 
         for sym, svg_str in ALL_SVGS.items():
             renderer = QSvgRenderer(QByteArray(svg_str.encode("utf-8")))
@@ -182,9 +183,31 @@ class PieceRenderer:
         return pixmap
 
     def get_piece_icon(self, symbol: str, size: int) -> QIcon:
-        """Return a QIcon containing the rendered piece pixmap."""
-        pixmap = self.get_piece_pixmap(symbol, size)
-        return QIcon(pixmap)
+        """Return a cached QIcon containing the rendered piece pixmap."""
+        key = (symbol, size)
+        if key in self._icon_cache:
+            return self._icon_cache[key]
+        icon = QIcon(self.get_piece_pixmap(symbol, size))
+        self._icon_cache[key] = icon
+        return icon
+
+    def get_move_dot_icon(self, size: int) -> QIcon:
+        """Return a cached QIcon for empty legal move destinations."""
+        key = ("dot_icon", size)
+        if key in self._icon_cache:
+            return self._icon_cache[key]
+        icon = QIcon(self.get_move_dot_pixmap(size))
+        self._icon_cache[key] = icon
+        return icon
+
+    def get_capture_target_icon(self, symbol: str, size: int) -> QIcon:
+        """Return a cached QIcon for piece capture targets."""
+        key = (f"cap_icon_{symbol}", size)
+        if key in self._icon_cache:
+            return self._icon_cache[key]
+        icon = QIcon(self.get_capture_target_pixmap(symbol, size))
+        self._icon_cache[key] = icon
+        return icon
 
     def get_move_dot_pixmap(self, size: int) -> QPixmap:
         """Return a clean, centered translucent golden dot for empty legal move destinations."""

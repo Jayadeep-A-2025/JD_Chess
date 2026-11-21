@@ -33,6 +33,7 @@ class ComputerEngine:
         # Protects engine access from concurrent get_best_move / cancel calls
         self._lock = threading.Lock()
         self._searching = False
+        self._current_skill_level: int | None = None
 
     @staticmethod
     def find_engine() -> str | None:
@@ -116,8 +117,14 @@ class ComputerEngine:
         )
 
         with self._lock:
-            if "Skill Level" in engine.options:
-                engine.configure({"Skill Level": settings["skill"]})
+            target_skill = settings.get("skill")
+            if target_skill is not None and self._current_skill_level != target_skill:
+                if "Skill Level" in engine.options:
+                    try:
+                        engine.configure({"Skill Level": target_skill})
+                        self._current_skill_level = target_skill
+                    except Exception:
+                        pass
 
             # If it's Easy mode, introduce a chance to make a random amateur move (e.g., 35% of the time)
             if difficulty == "Easy":
@@ -132,6 +139,8 @@ class ComputerEngine:
                     board,
                     chess.engine.Limit(time=settings["time"]),
                 )
+            except (chess.engine.EngineError, chess.engine.EngineTerminatedError):
+                return None
             finally:
                 self._searching = False
 

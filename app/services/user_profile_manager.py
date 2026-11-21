@@ -35,6 +35,23 @@ class UserProfile:
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
+    def clone(self) -> UserProfile:
+        """Create a fast detached copy of the profile without dict serialization overhead."""
+        return UserProfile(
+            username=self.username,
+            completed_lessons=list(self.completed_lessons),
+            current_lesson_id=self.current_lesson_id,
+            sound_enabled=self.sound_enabled,
+            exercise_attempts=self.exercise_attempts,
+            exercise_correct=self.exercise_correct,
+            hint_usage_count=self.hint_usage_count,
+            topic_attempts=dict(self.topic_attempts),
+            topic_correct=dict(self.topic_correct),
+            topic_mistakes=dict(self.topic_mistakes),
+            lesson_history={k: dict(v) for k, v in self.lesson_history.items()},
+            unlocked_level=self.unlocked_level,
+        )
+
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> UserProfile:
         return cls(
@@ -136,18 +153,18 @@ class UserProfileManager:
             if self.storage_path.is_file():
                 mtime = self.storage_path.stat().st_mtime
                 if self._cached_profile is not None and self._cached_mtime == mtime:
-                    return UserProfile.from_dict(self._cached_profile.to_dict())
+                    return self._cached_profile.clone()
                 data = self._read_data()
                 prof = UserProfile.from_dict(data)
                 self._cached_profile = prof
                 self._cached_mtime = mtime
-                return UserProfile.from_dict(prof.to_dict())
+                return prof.clone()
         except OSError:
             pass
         data = self._read_data()
         prof = UserProfile.from_dict(data)
         self._cached_profile = prof
-        return prof
+        return prof.clone()
 
     def save_profile(self, profile: UserProfile) -> None:
         self._write_data(profile.to_dict())
@@ -283,7 +300,7 @@ class UserProfileManager:
 
     def get_recommended_lesson_id(self) -> str:
         """Return the next best lesson ID based on topic weaknesses or progression."""
-        from app.services.curriculum import get_curriculum
+        from app.services.curriculum import get_curriculum, get_lessons_by_topic
 
         prof = self.get_profile()
         curriculum = get_curriculum()
@@ -292,8 +309,8 @@ class UserProfileManager:
         # 1. Look for uncompleted lessons in the player's weakest topics
         weak_topics = [t for t, _ in self.get_weak_topics()]
         for topic in weak_topics:
-            for lesson in curriculum:
-                if lesson.topic == topic and lesson.id not in completed_set:
+            for lesson in get_lessons_by_topic(topic):
+                if lesson.id not in completed_set:
                     return lesson.id
 
         # 2. Look for the next uncompleted lesson in the curriculum
@@ -306,15 +323,14 @@ class UserProfileManager:
 
     def _calc_max_unlocked_level(self, completed_lessons: list[str]) -> int:
         """Determine highest unlocked level based on prerequisite completion."""
-        from app.services.curriculum import get_curriculum
+        from app.services.curriculum import get_lessons_by_level
 
-        curriculum = get_curriculum()
         comp_set = set(completed_lessons)
         max_level = 1
 
         # Check each level from 1 to 6 to see if level + 1 unlocks
         for lvl in range(1, 7):
-            level_lessons = [l for l in curriculum if l.level_number == lvl]
+            level_lessons = get_lessons_by_level(lvl)
             if not level_lessons:
                 continue
             done = sum(1 for l in level_lessons if l.id in comp_set)
@@ -336,10 +352,9 @@ class UserProfileManager:
 
     def get_level_progress(self, level_number: int) -> tuple[int, int]:
         """Return (completed_count, total_count) for a specific level."""
-        from app.services.curriculum import get_curriculum
+        from app.services.curriculum import get_lessons_by_level
 
-        curriculum = get_curriculum()
-        level_lessons = [l for l in curriculum if l.level_number == level_number]
+        level_lessons = get_lessons_by_level(level_number)
         if not level_lessons:
             return (0, 0)
         comp_set = set(self.get_profile().completed_lessons)

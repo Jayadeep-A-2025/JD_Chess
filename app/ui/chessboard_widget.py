@@ -2,6 +2,7 @@ from __future__ import annotations
 
 """Chessboard widget with coordinate labels, highlighting, custom vector pieces, and responsive sizing."""
 
+import functools
 import chess
 from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtGui import QIcon
@@ -22,18 +23,13 @@ PIECE_GLYPHS = {
 }
 
 
-def compute_captured_pieces(move_stack: list[chess.Move]) -> tuple[list[str], list[str]]:
-    """Replay moves on a temporary chess.Board to identify captured pieces in order.
-
-    Returns (white_captures, black_captures) where:
-    - white_captures: list of black piece glyphs captured by White
-    - black_captures: list of white piece glyphs captured by Black
-    """
+@functools.lru_cache(maxsize=128)
+def _compute_captured_pieces_memo(move_tuple: tuple[chess.Move, ...]) -> tuple[tuple[str, ...], tuple[str, ...]]:
     temp_board = chess.Board()
     white_captures: list[str] = []
     black_captures: list[str] = []
 
-    for move in move_stack:
+    for move in move_tuple:
         captured_glyph = None
         if temp_board.is_en_passant(move):
             cap_square = chess.square(
@@ -56,7 +52,16 @@ def compute_captured_pieces(move_stack: list[chess.Move]) -> tuple[list[str], li
 
         temp_board.push(move)
 
-    return white_captures, black_captures
+    return tuple(white_captures), tuple(black_captures)
+
+
+def compute_captured_pieces(move_stack: list[chess.Move]) -> tuple[list[str], list[str]]:
+    """Replay moves on a temporary chess.Board to identify captured pieces in order.
+
+    Returns (white_captures, black_captures) with LRU caching to eliminate redundant replays.
+    """
+    w, b = _compute_captured_pieces_memo(tuple(move_stack))
+    return list(w), list(b)
 
 
 class ChessBoardWidget(QWidget):
@@ -77,6 +82,11 @@ class ChessBoardWidget(QWidget):
         self.coord_margin = 22
         self.outer_margin = 10
         self.square_size = 50
+
+        # Rendering cache states
+        self._prev_square_states: dict[tuple[int, int], tuple] = {}
+        self._prev_icon_size: int = 0
+        self._prev_orientation = self.player_color
 
         self.setSizePolicy(
             QSizePolicy.Policy.Expanding,
@@ -161,6 +171,7 @@ class ChessBoardWidget(QWidget):
 
     def set_orientation(self, color: chess.Color) -> None:
         self.player_color = color
+        self._prev_square_states.clear()
         self.clear_selection()
         self.update_coordinates()
         self.refresh()
@@ -306,11 +317,17 @@ class ChessBoardWidget(QWidget):
         icon_size = max(18, int(self.square_size * 0.82))
         q_icon_size = QSize(icon_size, icon_size)
 
+        if icon_size != self._prev_icon_size or self.player_color != self._prev_orientation:
+            self._prev_square_states.clear()
+            self._prev_icon_size = icon_size
+            self._prev_orientation = self.player_color
+
         for (row, col), button in self.square_buttons.items():
             square = self.visual_to_square(row, col)
             square_name = chess.square_name(square)
             piece = self.game.board.piece_at(square)
-            
+            piece_sym = piece.symbol() if piece else None
+
             # Mastercrafted Light/Dark Squares with Rich Contrast
             is_light_square = (row + col) % 2 == 0
             base_bg = "#E8D8C4" if is_light_square else "#5C3D28"
@@ -326,21 +343,24 @@ class ChessBoardWidget(QWidget):
             else:
                 background = base_bg
 
+            square_state = (piece_sym, background, is_selected, is_dest, is_last)
+            if self._prev_square_states.get((row, col)) == square_state:
+                continue
+            self._prev_square_states[(row, col)] = square_state
+
             button.setIconSize(q_icon_size)
 
             # Clear plain text so vector icons are cleanly centered
             button.setText("")
 
-            # Render piece and legal move / capture markers
+            # Render piece and legal move / capture markers using cached icons
             if is_dest:
-                if piece:
-                    # Capture target: render piece with vibrant red/gold capture frame
-                    button.setIcon(QIcon(renderer.get_capture_target_pixmap(piece.symbol(), icon_size)))
+                if piece_sym:
+                    button.setIcon(renderer.get_capture_target_icon(piece_sym, icon_size))
                 else:
-                    # Empty destination square: render smooth centered golden dot
-                    button.setIcon(QIcon(renderer.get_move_dot_pixmap(icon_size)))
-            elif piece:
-                button.setIcon(renderer.get_piece_icon(piece.symbol(), icon_size))
+                    button.setIcon(renderer.get_move_dot_icon(icon_size))
+            elif piece_sym:
+                button.setIcon(renderer.get_piece_icon(piece_sym, icon_size))
             else:
                 button.setIcon(QIcon())
 

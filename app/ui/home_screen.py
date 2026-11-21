@@ -273,24 +273,26 @@ class HomeScreen(QWidget):
             self._apply_grid_layout(is_mobile=should_be_mobile)
 
         is_compact = (h < 720 or w < 760)
-        if is_compact:
-            self.main_layout.setContentsMargins(16, 8, 16, 8)
-            self.main_layout.setSpacing(8)
-            self.center_layout.setSpacing(6)
-            self.hero_layout.setSpacing(2)
-            self.title_lbl.setStyleSheet(
-                "font-size: 20px; font-weight: 800; color: #241B16; letter-spacing: 1.5px;"
-            )
-            self.grid.setSpacing(8)
-        else:
-            self.main_layout.setContentsMargins(20, 14, 20, 16)
-            self.main_layout.setSpacing(12)
-            self.center_layout.setSpacing(10)
-            self.hero_layout.setSpacing(4)
-            self.title_lbl.setStyleSheet(
-                "font-size: 24px; font-weight: 800; color: #241B16; letter-spacing: 2px;"
-            )
-            self.grid.setSpacing(10)
+        if is_compact != getattr(self, "_is_compact", None):
+            self._is_compact = is_compact
+            if is_compact:
+                self.main_layout.setContentsMargins(16, 8, 16, 8)
+                self.main_layout.setSpacing(8)
+                self.center_layout.setSpacing(6)
+                self.hero_layout.setSpacing(2)
+                self.title_lbl.setStyleSheet(
+                    "font-size: 20px; font-weight: 800; color: #241B16; letter-spacing: 1.5px;"
+                )
+                self.grid.setSpacing(8)
+            else:
+                self.main_layout.setContentsMargins(20, 14, 20, 16)
+                self.main_layout.setSpacing(12)
+                self.center_layout.setSpacing(10)
+                self.hero_layout.setSpacing(4)
+                self.title_lbl.setStyleSheet(
+                    "font-size: 24px; font-weight: 800; color: #241B16; letter-spacing: 2px;"
+                )
+                self.grid.setSpacing(10)
 
     # -------------------------------------------------------------
     # Profile & CM Header Card

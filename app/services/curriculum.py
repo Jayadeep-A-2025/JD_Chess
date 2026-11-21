@@ -1847,8 +1847,18 @@ CURRICULUM: list[Lesson] = [
 
 
 # =============================================================================
-# CURRICULUM ACCESSORS & PROGRESSION HELPERS
+# CURRICULUM ACCESSORS & PROGRESSION HELPERS (O(1) Indexed Lookups)
 # =============================================================================
+
+_LESSONS_BY_ID: dict[str, Lesson] = {l.id: l for l in CURRICULUM}
+_LESSONS_INDEX: dict[str, int] = {l.id: i for i, l in enumerate(CURRICULUM)}
+_LESSONS_BY_LEVEL: dict[int, list[Lesson]] = {
+    lvl: [l for l in CURRICULUM if l.level_number == lvl] for lvl in range(1, 8)
+}
+_LESSONS_BY_TOPIC: dict[str, list[Lesson]] = {}
+for _l in CURRICULUM:
+    _LESSONS_BY_TOPIC.setdefault(_l.topic, []).append(_l)
+
 
 def get_curriculum() -> list[Lesson]:
     """Return all available lessons in the structured Academy curriculum."""
@@ -1861,34 +1871,31 @@ def get_academy_levels() -> list[dict[str, Any]]:
 
 
 def get_lesson_by_id(lesson_id: str) -> Lesson | None:
-    """Find a specific lesson by its unique string ID."""
-    for lesson in CURRICULUM:
-        if lesson.id == lesson_id:
-            return lesson
-    return None
+    """Find a specific lesson by its unique string ID in O(1) time."""
+    return _LESSONS_BY_ID.get(lesson_id)
 
 
 def get_lessons_by_level(level_number: int) -> list[Lesson]:
-    """Return all lessons belonging to a specific Academy level (1-7)."""
-    return [l for l in CURRICULUM if l.level_number == level_number]
+    """Return all lessons belonging to a specific Academy level (1-7) in O(1) time."""
+    return list(_LESSONS_BY_LEVEL.get(level_number, []))
 
 
 def get_lessons_by_topic(topic: str) -> list[Lesson]:
-    """Return all lessons associated with a given tactical or strategic topic."""
-    return [l for l in CURRICULUM if l.topic == topic]
+    """Return all lessons associated with a given tactical or strategic topic in O(1) time."""
+    return list(_LESSONS_BY_TOPIC.get(topic, []))
 
 
 def get_next_lesson(current_id: str) -> Lesson | None:
-    """Retrieve the lesson following current_id in the progression path."""
-    for i, lesson in enumerate(CURRICULUM):
-        if lesson.id == current_id and i + 1 < len(CURRICULUM):
-            return CURRICULUM[i + 1]
+    """Retrieve the lesson following current_id in the progression path in O(1) time."""
+    idx = _LESSONS_INDEX.get(current_id)
+    if idx is not None and idx + 1 < len(CURRICULUM):
+        return CURRICULUM[idx + 1]
     return None
 
 
 def get_prev_lesson(current_id: str) -> Lesson | None:
-    """Retrieve the lesson preceding current_id in the progression path."""
-    for i, lesson in enumerate(CURRICULUM):
-        if lesson.id == current_id and i > 0:
-            return CURRICULUM[i - 1]
+    """Retrieve the lesson preceding current_id in the progression path in O(1) time."""
+    idx = _LESSONS_INDEX.get(current_id)
+    if idx is not None and idx > 0:
+        return CURRICULUM[idx - 1]
     return None

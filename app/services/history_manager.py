@@ -119,6 +119,8 @@ class HistoryManager:
                 self.storage_path = Path(env_path)
             else:
                 self.storage_path = Path.home() / ".jd_chess" / "match_history.json"
+        self._cached_data: dict[str, Any] | None = None
+        self._cached_mtime: float | None = None
 
     # ------------------------------------------------------------------
     # Private IO helpers
@@ -135,13 +137,28 @@ class HistoryManager:
 
     def _read_data(self) -> dict[str, Any]:
         if not self.storage_path.is_file():
+            self._cached_data = None
+            self._cached_mtime = None
             return {"rating": _DEFAULT_RATING, "matches": []}
+
+        try:
+            mtime = self.storage_path.stat().st_mtime
+            if self._cached_data is not None and self._cached_mtime == mtime:
+                return self._cached_data
+        except OSError:
+            pass
+
         try:
             with open(self.storage_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
             # Ensure keys exist
             data.setdefault("rating", _DEFAULT_RATING)
             data.setdefault("matches", [])
+            self._cached_data = data
+            try:
+                self._cached_mtime = self.storage_path.stat().st_mtime
+            except OSError:
+                self._cached_mtime = None
             return data
         except json.JSONDecodeError as exc:
             logger.error(
@@ -150,6 +167,8 @@ class HistoryManager:
                 self.storage_path,
                 exc,
             )
+            self._cached_data = None
+            self._cached_mtime = None
             return {"rating": _DEFAULT_RATING, "matches": []}
         except OSError as exc:
             logger.error(
@@ -157,6 +176,8 @@ class HistoryManager:
                 self.storage_path,
                 exc,
             )
+            self._cached_data = None
+            self._cached_mtime = None
             return {"rating": _DEFAULT_RATING, "matches": []}
 
     def _write_data(self, data: dict[str, Any]) -> None:
@@ -171,6 +192,11 @@ class HistoryManager:
                 json.dump(data, tf, indent=2)
                 temp_name = tf.name
             os.replace(temp_name, str(self.storage_path))
+            self._cached_data = data
+            try:
+                self._cached_mtime = self.storage_path.stat().st_mtime
+            except OSError:
+                self._cached_mtime = None
         except OSError as exc:
             logger.error(
                 "HistoryManager: atomic write failed for %s (%s). "
@@ -181,6 +207,11 @@ class HistoryManager:
             try:
                 with open(self.storage_path, "w", encoding="utf-8") as f:
                     json.dump(data, f, indent=2)
+                self._cached_data = data
+                try:
+                    self._cached_mtime = self.storage_path.stat().st_mtime
+                except OSError:
+                    self._cached_mtime = None
             except OSError as exc2:
                 raise RuntimeError(
                     f"HistoryManager: failed to write history to "

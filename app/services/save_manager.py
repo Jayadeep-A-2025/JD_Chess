@@ -68,6 +68,8 @@ class SaveManager:
                 self.storage_path = Path(env_path)
             else:
                 self.storage_path = Path.home() / ".jd_chess" / "saved_games.json"
+        self._cached_data: dict[str, Any] | None = None
+        self._cached_mtime: float | None = None
 
     def _ensure_dir(self) -> None:
         try:
@@ -81,16 +83,34 @@ class SaveManager:
 
     def _read_data(self) -> dict[str, Any]:
         if not self.storage_path.is_file():
+            self._cached_data = None
+            self._cached_mtime = None
             return {}
+
+        try:
+            mtime = self.storage_path.stat().st_mtime
+            if self._cached_data is not None and self._cached_mtime == mtime:
+                return self._cached_data
+        except OSError:
+            pass
+
         try:
             with open(self.storage_path, "r", encoding="utf-8") as f:
-                return json.load(f)
+                data = json.load(f)
+            self._cached_data = data
+            try:
+                self._cached_mtime = self.storage_path.stat().st_mtime
+            except OSError:
+                self._cached_mtime = None
+            return data
         except json.JSONDecodeError as exc:
             logger.error(
                 "SaveManager: save file %s is corrupt (%s). Returning empty state.",
                 self.storage_path,
                 exc,
             )
+            self._cached_data = None
+            self._cached_mtime = None
             return {}
         except OSError as exc:
             logger.error(
@@ -98,6 +118,8 @@ class SaveManager:
                 self.storage_path,
                 exc,
             )
+            self._cached_data = None
+            self._cached_mtime = None
             return {}
 
     def _write_data(self, data: dict[str, Any]) -> None:
@@ -112,6 +134,11 @@ class SaveManager:
                 json.dump(data, tf, indent=2)
                 temp_name = tf.name
             os.replace(temp_name, str(self.storage_path))
+            self._cached_data = data
+            try:
+                self._cached_mtime = self.storage_path.stat().st_mtime
+            except OSError:
+                self._cached_mtime = None
         except OSError as exc:
             logger.error(
                 "SaveManager: atomic write failed for %s (%s). "
@@ -122,6 +149,11 @@ class SaveManager:
             try:
                 with open(self.storage_path, "w", encoding="utf-8") as f:
                     json.dump(data, f, indent=2)
+                self._cached_data = data
+                try:
+                    self._cached_mtime = self.storage_path.stat().st_mtime
+                except OSError:
+                    self._cached_mtime = None
             except OSError as exc2:
                 # Both strategies failed — raise so callers know the save did not persist.
                 raise RuntimeError(
