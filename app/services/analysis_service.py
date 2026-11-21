@@ -342,12 +342,12 @@ def analyze_game(
 
             if classification == "blunder":
                 comment = (
-                    f"Blunder! Lost ~{cp_loss//100:.1f} pawns. "
+                    f"Blunder! Lost ~{cp_loss / 100.0:.1f} pawns. "
                     f"Better: {best_san}."
                 )
             elif classification == "mistake":
                 comment = (
-                    f"Mistake. Lost ~{cp_loss//100:.1f} pawns. "
+                    f"Mistake. Lost ~{cp_loss / 100.0:.1f} pawns. "
                     f"Consider: {best_san}."
                 )
             elif classification == "inaccuracy":

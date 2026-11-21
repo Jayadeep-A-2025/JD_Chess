@@ -75,6 +75,10 @@ class MatchRecord:
     blunders: int
     mistakes: int
 
+    @property
+    def rating_delta(self) -> int:
+        return self.rating_change
+
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
@@ -189,6 +193,10 @@ class HistoryManager:
     def get_rating(self) -> int:
         return int(self._read_data().get("rating", _DEFAULT_RATING))
 
+    def get_current_rating(self) -> int:
+        """Alias for get_rating."""
+        return self.get_rating()
+
     def get_all_matches(self) -> list[MatchRecord]:
         data = self._read_data()
         records = []
@@ -198,6 +206,10 @@ class HistoryManager:
             except Exception:
                 pass
         return records
+
+    def get_matches(self) -> list[MatchRecord]:
+        """Alias for get_all_matches."""
+        return self.get_all_matches()
 
     def get_matches_count(self) -> int:
         return len(self._read_data().get("matches", []))
@@ -220,9 +232,12 @@ class HistoryManager:
 
         # Opponent rating is based on difficulty (for Computer mode)
         if game_mode == "Play vs Computer":
-            opponent_rating = {"Easy": 800, "Medium": 1200, "Hard": 1600}.get(
-                difficulty, 1200
-            )
+            opponent_rating = {
+                "Novice": 500,
+                "Easy": 800,
+                "Medium": 1200,
+                "Hard": 1600,
+            }.get(difficulty, 1200)
         else:
             opponent_rating = current_rating  # local: symmetric change
 

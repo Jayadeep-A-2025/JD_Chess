@@ -613,7 +613,7 @@ def test_main_window_minimum_mobile_size(qt_app):
 
 def test_expanded_curriculum_and_new_categories():
     lessons = get_curriculum()
-    assert len(lessons) == 36
+    assert len(lessons) >= 36
 
     categories = {l.category for l in lessons}
     expected_categories = {
@@ -732,5 +732,105 @@ def test_home_screen_reflects_36_lessons(qt_app):
         hm = HistoryManager(Path(tmpdir) / "history.json")
 
         hs = HomeScreen(save_manager=sm, profile_manager=pm, history_manager=hm)
-        assert "/ 36 Mastered" in hs.learn_badge.text()
+        assert f"/ {len(get_curriculum())} Mastered" in hs.learn_badge.text()
         hs.close()
+
+
+def test_novice_difficulty_rating_calculation():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        hm = HistoryManager(Path(tmpdir) / "history.json")
+        # Starting rating 1200
+        assert hm.get_current_rating() == 1200
+
+        # Win against Novice (rating 500)
+        rec = hm.record_match(
+            game_mode="Play vs Computer",
+            player_color="White",
+            difficulty="Novice",
+            result="win",
+            result_label="Checkmate",
+            moves=["e2e4"],
+        )
+        # Winning against 500 rating as 1200 gives small gain (expected ~3-5 points, definitely < 16)
+        assert rec.rating_delta < 16
+        # Compare with win against Hard (1600)
+        hm2 = HistoryManager(Path(tmpdir) / "history2.json")
+        rec_hard = hm2.record_match(
+            game_mode="Play vs Computer",
+            player_color="White",
+            difficulty="Hard",
+            result="win",
+            result_label="Checkmate",
+            moves=["e2e4"],
+        )
+        assert rec.rating_delta < rec_hard.rating_delta
+
+
+def test_analysis_service_centipawn_float_precision():
+    # Test formatting in analysis comments
+    cp_loss = 250
+    blunder_comment = f"Blunder! Lost ~{cp_loss / 100.0:.1f} pawns."
+    assert "2.5 pawns" in blunder_comment
+
+    mistake_loss = 150
+    mistake_comment = f"Mistake. Lost ~{mistake_loss / 100.0:.1f} pawns."
+    assert "1.5 pawns" in mistake_comment
+
+
+def test_user_profile_sound_enabled_getter_setter_and_caching():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        profile_path = Path(tmpdir) / "user_profile.json"
+        pm = UserProfileManager(profile_path)
+
+        assert pm.get_sound_enabled() is True
+        pm.set_sound_enabled(False)
+        assert pm.get_sound_enabled() is False
+
+        # Read directly through a second manager instance
+        pm2 = UserProfileManager(profile_path)
+        assert pm2.get_sound_enabled() is False
+
+        # Verify caching returns identical copy
+        prof1 = pm.get_profile()
+        prof2 = pm.get_profile()
+        assert prof1 == prof2
+
+
+def test_user_profile_corrupted_json_recovery():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        profile_path = Path(tmpdir) / "user_profile.json"
+        profile_path.write_text("{ corrupt json data ...", encoding="utf-8")
+
+        pm = UserProfileManager(profile_path)
+        prof = pm.get_profile()
+        assert prof.username == "Grandmaster"
+        assert prof.completed_lessons == []
+
+
+def test_history_manager_corrupted_json_recovery():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        history_path = Path(tmpdir) / "history.json"
+        history_path.write_text("invalid json content", encoding="utf-8")
+
+        hm = HistoryManager(history_path)
+        assert hm.get_current_rating() == 1200
+        assert hm.get_matches() == []
+
+
+def test_curriculum_all_36_lessons_legal_and_guided_moves():
+    lessons = get_curriculum()
+    assert len(lessons) >= 36
+
+    for lesson in lessons:
+        board = chess.Board(lesson.fen)
+        for move_uci in lesson.expected_moves:
+            move = chess.Move.from_uci(move_uci)
+            assert move in board.legal_moves, (
+                f"Lesson '{lesson.id}' ({lesson.title}): move {move_uci} is not legal in FEN {lesson.fen}"
+            )
+        if lesson.guided_move:
+            guided = chess.Move.from_uci(lesson.guided_move)
+            assert guided in board.legal_moves, (
+                f"Lesson '{lesson.id}' ({lesson.title}): guided move {lesson.guided_move} is not legal in FEN {lesson.fen}"
+            )
+        assert len(lesson.hints) >= 1

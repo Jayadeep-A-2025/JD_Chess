@@ -157,6 +157,10 @@ class SaveManager:
         """Return number of currently active save slots."""
         return sum(1 for slot in self.get_slots() if slot.is_active)
 
+    def get_active_count(self) -> int:
+        """Alias for active_save_count for API consistency."""
+        return self.active_save_count()
+
     def save_game(
         self,
         slot_id: int,

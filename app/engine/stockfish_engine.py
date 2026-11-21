@@ -3,6 +3,7 @@ from __future__ import annotations
 """Computer UCI engine integration."""
 
 import os
+import random
 import shutil
 import sys
 import threading
@@ -15,11 +16,11 @@ class ComputerEngine:
     """Manage a Computer chess engine process and request computer moves."""
 
     DIFFICULTY_SETTINGS = {
-    "Novice": {"time": 0.05, "skill": 0},
-    "Easy":   {"time": 0.15, "skill": 3},
-    "Medium": {"time": 0.50, "skill": 8},
-    "Hard":   {"time": 1.20, "skill": 20},
-}
+        "Novice": {"time": 0.05, "skill": 0},
+        "Easy":   {"time": 0.15, "skill": 3},
+        "Medium": {"time": 0.50, "skill": 8},
+        "Hard":   {"time": 1.20, "skill": 20},
+    }
 
     def __init__(self, engine_path: str | None = None) -> None:
         self.engine_path = engine_path or self.find_engine()
@@ -120,7 +121,6 @@ class ComputerEngine:
 
             # If it's Easy mode, introduce a chance to make a random amateur move (e.g., 35% of the time)
             if difficulty == "Easy":
-                import random
                 legal_moves = list(board.legal_moves)
                 # 35% chance to play a completely random move, simulating a beginner blunder
                 if legal_moves and random.random() < 0.35:

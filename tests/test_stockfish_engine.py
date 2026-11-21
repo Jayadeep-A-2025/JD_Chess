@@ -73,3 +73,15 @@ def test_find_engine_in_macos_app_resources(monkeypatch, tmp_path):
     )
 
     assert ComputerEngine.find_engine() == str(engine_path)
+
+
+def test_engine_cancel_search_safe():
+    engine = ComputerEngine.__new__(ComputerEngine)
+    engine.engine = None
+    engine._searching = False
+    # cancel_search when not searching or engine is None should execute cleanly without raising
+    engine.cancel_search()
+
+    engine._searching = True
+    engine.cancel_search()
+    assert True

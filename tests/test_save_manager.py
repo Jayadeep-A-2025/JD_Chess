@@ -91,3 +91,31 @@ def test_invalid_slot_id_raises_value_error(temp_saves_file):
 
     assert mgr.get_slot(0) is None
     assert mgr.get_slot(5) is None
+
+
+def test_save_manager_get_active_count_alias(temp_saves_file):
+    mgr = SaveManager(temp_saves_file)
+    assert mgr.get_active_count() == 0
+    mgr.save_game(
+        slot_id=1,
+        game_mode="Local 2-player",
+        player_color="White",
+        difficulty="Medium",
+        moves=["e2e4"],
+        fen="rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+        turn="Black",
+    )
+    assert mgr.get_active_count() == 1
+    assert mgr.get_active_count() == mgr.active_save_count()
+
+
+def test_save_manager_corrupted_json_recovery(temp_saves_file):
+    temp_saves_file.parent.mkdir(parents=True, exist_ok=True)
+    temp_saves_file.write_text("{ corrupt json: [invalid ...", encoding="utf-8")
+
+    mgr = SaveManager(temp_saves_file)
+    # Corrupted file should safely fallback to empty slots without crashing
+    slots = mgr.get_slots()
+    assert len(slots) == 3
+    assert not mgr.has_active_saves()
+    assert mgr.active_save_count() == 0
